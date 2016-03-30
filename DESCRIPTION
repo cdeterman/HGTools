@@ -1,0 +1,28 @@
+Package: HGTools
+Type: Package
+Title: HG Tools
+Version: 1.3.0
+Date: 2016-03-30
+Author: Charles Determan
+Maintainer: Charles Determan <cdeterman@healthgrades.com>
+Description: Random functions to help with analyses
+License: GPL-2
+Depends:
+    bigmemory,
+    bigalgebra,
+    biganalytics
+Imports: 
+    assertive,
+    neuralnet,
+    foreach,
+    e1071,
+    gbm,
+    glmnet,
+    randomForest,
+    ggplot2,
+    reshape2,
+    Rcpp (>= 0.11.3),
+    RcppArmadillo (>= 0.3.930.1),
+    caTools
+LinkingTo: Rcpp, RcppArmadillo, BH, bigmemory
+Suggests: testthat

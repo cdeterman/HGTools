@@ -1,0 +1,26 @@
+# configure file to determine additional flags
+# initially designed to determine if C++11 code
+# should be implemented.  However, I decided to
+# make the code back compatible.  I have, however,
+# decided to leave the additional statements here
+# in case I revisit this further down the line.
+
+FLAGS="PKG_CXXFLAGS=-I../inst/include"
+LIBS=""
+
+echo -n " checking for OS..."
+
+if [ -f /etc/redhat-release ]; then
+  VER=$(cat /etc/redhat-release | cut -d" " -f3 | cut -d "." -f1)
+  if [ "$VER" == "5" ]; then
+    echo "Centos 5"
+  else
+    FLAGS="${FLAGS} -std=c++11"
+  fi
+else
+  echo "Debian"
+  FLAGS="${FLAGS} -std=c++11"
+fi
+
+echo "${FLAGS}" > src/Makevars
+echo "${LIBS}" >> src/Makevars
