@@ -12,7 +12,7 @@
 #' @return \item{neurons}{a list of the neurons' output for each layer of the neural network.}
 #' @return \item{net.result}{a matrix containing the overall result of the neural network.}
 #' @details This is a replication of the \link[neuralnet]{compute} function only made compatible with big.matrix objects.
-#' @import bigmemoryExt biganalytics
+#' @import biganalytics
 #' @export
 big.compute <-
   function (x, covariate, rep = 1, model_type=NULL) 
@@ -35,7 +35,7 @@ big.compute <-
     length.weights <- length(weights)
     
     # Need to be able to bind columns to big.matrix
-    covariate <- cbindBM(covariate, 1, "left")
+    covariate <- as.big.matrix(cbind(1, covariate[,]))
 
     act.fct <- nn$act.fct
     neurons <- list(covariate)

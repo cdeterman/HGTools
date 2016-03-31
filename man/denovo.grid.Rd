@@ -4,11 +4,9 @@
 \alias{denovo.grid}
 \title{Denovo Grid Generation}
 \usage{
-denovo.grid(data, method, res)
+denovo.grid(method, res, data, dvs = NULL)
 }
 \arguments{
-\item{data}{data of method to be tuned}
-
 \item{method}{vector indicating the models to generate grids.
 Available options are \code{"neuralnet"} (Neural Network),
 \code{"rf"} (Random Forest), \code{"gbm"} (Gradient Boosting Machine),
@@ -16,6 +14,10 @@ Available options are \code{"neuralnet"} (Neural Network),
  (Elastic-net Generalized Linear Model)}
 
 \item{res}{Resolution of model optimization grid.}
+
+\item{data}{data of method to be tuned}
+
+\item{dvs}{character vector identifying the dependent variables in the dataset}
 }
 \value{
 A list containing dataframes of all combinations of

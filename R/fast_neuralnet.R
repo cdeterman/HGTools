@@ -1,5 +1,5 @@
 #' @importFrom Rcpp evalCpp
-#' @useDynLib HGmiscTools
+#' @useDynLib HGTools
 #' @export
 fast_neuralnet <-
   function (formula, 

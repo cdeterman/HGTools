@@ -2,14 +2,14 @@
 
 #' @title Denovo Grid Generation
 #' @description Greates grid for optimizing selected models
-#' 
-#' @param data data of method to be tuned
 #' @param method vector indicating the models to generate grids.
 #' Available options are \code{"neuralnet"} (Neural Network), 
 #' \code{"rf"} (Random Forest), \code{"gbm"} (Gradient Boosting Machine),
 #'  \code{"svm"} (Support Vector Machines), and \code{"glmnet"} 
 #'  (Elastic-net Generalized Linear Model)
 #' @param res Resolution of model optimization grid.
+#' @param data data of method to be tuned
+#' @param dvs character vector identifying the dependent variables in the dataset
 #' @return A list containing dataframes of all combinations of 
 #' parameters for each model:
 #' @author Charles Determan Jr
@@ -18,22 +18,14 @@
 #' the generated grid to a list.
 #' @export
 denovo.grid <- 
-    function(data,
-             method,
-             res
+    function(method,
+             res,
+             data,
+             dvs = NULL
     )
     {
-        assert_is_data.frame(data)
         assert_is_character(method)
         assert_is_numeric(res)
-        
-        if(!".classes" %in% colnames(data)){
-            stop("Creating a tuning grid requires a '.classes' column
-                 representing the class/group labels.")
-        }
-        
-        # number of columns - 1
-        nc <- dim(data)[2] - 1
         
         if("gbm" %in% method) {
             .tree.options = c(500, 1000, 2000, 5000, 10000)
@@ -63,7 +55,7 @@ denovo.grid <-
                        .n.trees = .tree.options[1:res],                    
                        .shrinkage = c(.1/seq(res))),
                    
-                   rf = rfTune(data, res),
+                   rf = rfTune(data, dvs, res),
                    
                    svm = data.frame(.C = 2 ^((1:res) - 3)),
                    
@@ -75,22 +67,25 @@ denovo.grid <-
 
 rfTune <- function(
     data,
+    dvs,
     res
 )
 {
-    p <- dim(data)[2] - 1 
-    c <- ceiling(p/50)
+    assert_is_not_null(data)
+    
+    if(is.null(dvs)){
+        warning("RandomForest uses the data dimensions to generate a grid. 
+                Make sure this your intention or provide the dvs.")
+    }
+    
+    p <- dim(data)[2] - ifelse(is.null(dvs), 0, length(dvs)) 
     
     # sequence of trees to try
     # both for high and 'very high' dimensional data
     if(p < 500 ){
-        if(p < 100){
-            treeSeq <- floor(seq(1, to = p, length = res))    
-        }else{
-            treeSeq <- floor(seq(10, to = p, length = c))
-        }
+        treeSeq <- floor(seq(2, to = p, length = res)) 
     }else{
-        treeSeq <- floor(2^seq(5, to = log(p, base = 2), length = c))
+        treeSeq <- floor(2^seq(5, to = log(p, base = 2), length = res))
     } 
     
     # check if any of the numbers are repeated (i.e. repeating the 

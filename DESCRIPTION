@@ -1,13 +1,13 @@
 Package: HGTools
 Type: Package
 Title: HG Tools
-Version: 1.3.0
+Version: 1.3.1
 Date: 2016-03-30
 Author: Charles Determan
 Maintainer: Charles Determan <cdeterman@healthgrades.com>
 Description: Random functions to help with analyses
 License: GPL-2
-Depends:
+Depends: 
     bigmemory,
     bigalgebra,
     biganalytics
@@ -25,4 +25,6 @@ Imports:
     RcppArmadillo (>= 0.3.930.1),
     caTools
 LinkingTo: Rcpp, RcppArmadillo, BH, bigmemory
-Suggests: testthat
+Suggests: testthat,
+    knitr
+VignetteBuilder: knitr

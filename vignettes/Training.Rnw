@@ -1,0 +1,104 @@
+% \VignetteIndexEntry{ Training models }
+% \VignettePackage{HGTools}
+%\VignetteEngine{knitr::knitr}
+
+% To compile this document
+% library('knitr'); rm(list=ls()); knit('Training.Rnw')
+
+\documentclass[12pt]{article}
+\usepackage[sc]{mathpazo}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\geometry{verbose,tmargin=2.5cm,bmargin=2.5cm,lmargin=2.5cm,rmargin=2.5cm}
+\setcounter{secnumdepth}{2}
+\setcounter{tocdepth}{2}
+\usepackage{url}
+\usepackage[unicode=true,pdfusetitle,
+ bookmarks=true,bookmarksnumbered=true,bookmarksopen=true,bookmarksopenlevel=2,
+ breaklinks=false,pdfborder={0 0 1},backref=false,colorlinks=false]
+ {hyperref}
+\hypersetup{
+ pdfstartview={XYZ null null 1}}
+
+\newcommand{\pkg}[1]{{\fontseries{b}\selectfont #1}}
+\renewcommand{\pkg}[1]{{\textsf{#1}}}
+
+\newcommand{\Rpackage}[1]{\textsl{#1}}
+\newcommand\CRANpkg[1]{%
+  {\href{http://cran.fhcrc.org/web/packages/#1/index.html}%
+    {\Rpackage{#1}}}}
+\newcommand\Githubpkg[1]{\GithubSplit#1\relax}
+\def\GithubSplit#1/#2\relax{{\href{https://github.com/#1/#2}%
+    {\Rpackage{#2}}}}
+
+\newcommand{\Rcode}[1]{\texttt{#1}}
+\newcommand{\Rfunction}[1]{\Rcode{#1}}
+\newcommand{\Robject}[1]{\Rcode{#1}}
+\newcommand{\Rclass}[1]{\textit{#1}}
+
+\begin{document}
+
+<<setup, include=FALSE, cache=FALSE>>=
+library(knitr)
+opts_chunk$set(
+concordance=TRUE
+)
+@
+
+\title{Training Predictive Models}
+\author{Dr. Charles Determan Jr. PhD\footnote{cdetermanjr@gmail.com}}
+\newpage
+
+\maketitle
+\section{Introduction}
+This vignette is designed to simply get a user 'up and running' with model
+development.  The statistical justifications are not included here but are intended to
+be included in a subsequent vignette.  If the user is curious, feel free to search
+the extensive machine learning literature on the value of cross-validation.
+
+\maketitle
+\seciton{Installation}
+This package is not an official R package and exists solely in the authors github repository.
+There are some additional dependencies that must also be installed.
+
+<<install, eval=FALSE>>=
+# install devtools and bigmemory backends
+install.packages(c("devtools","bigmemory", "bigalgebra", "biganalytics"))
+
+# the other dependencies should be installed automatically
+devtools::install_github("cdeterman/HGTools")
+@
+
+\maketitle
+\section{Grid Searching}
+If you are completely unfamiliar with the model you wish to tune this package provides the 
+function \Rfunction{denovo.grid}.  For most methods, this function only requires you to
+specify the method and 'resolution' for the grid.
+
+<<gridSearch, eval = FALSE>>=
+denovo.grid(method = "neuralnet", res = 3)
+@
+
+However, some methods require the dataset for estimating appropriate parameters.  This
+includes random forest (denoted 'rf').
+
+<<rfgrid, eval=FALSE>>=
+# Note the dvs denotes the dependent variables to omit from the estimation
+# This can be omitted but you will receive a warning
+denovo.grid("neuralnet", res=5, data=trainingData, dvs=c("my_dv"))
+@
+
+If you know what you are doing, you can also create the grid manually using the \Rfunction{expand.grid}
+function.  Please note that the hyperparameters you specify must match the desired model and
+be prefixed with a 'period'
+
+<<manualGrid, eval=FALSE>>=
+expand.grid(.hidden = seq(2,5), .threshold = c(5, 1))
+@
+
+You can see the available parameters for each model by running \Rfunction{modelInfo}
+
+\maketitle
+\section{Model Training}
+Now you are essentially ready to begin training your model.
+
