@@ -192,5 +192,12 @@ fit_nn <- train(X = ivs,
 )
 @
 
+\maketitle
+\section{Saving All Models}
+It may be the user's wish to save every model that is created during cross-validation.  
+This option is also provided with the \Rfunction{train} function with the argument \Rcode{save\_models}.  
+Simply set the \Rcode{save\_models} to TRUE and all models generated with be saved with the format 
+'model\_hyperparam\_hyperparam\_iter\_cv\_model.rda' with varying numbers of hyperparameters for the 
+specific model.
 
 \end{document}
