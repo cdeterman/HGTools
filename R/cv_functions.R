@@ -5,10 +5,10 @@ train <-
     function(X, Y, 
              data,
              testData,
-             method = "neuralnet",
+             method,
              k = 10,
              metric = "AUC",
-             grid, cvControl = list(NULL), 
+             grid, cvControl = NULL, 
              save_models = FALSE,
              allowParallel = FALSE){
         
@@ -20,6 +20,15 @@ train <-
         
         if(is.null(cvControl)) cvControl = cvControl()
         nr <- nrow(data)
+        
+        # may only need for neuralnet, perhaps hide under some validation function
+        if(is.null(cvControl$model_type)){
+            if(length(attr(terms(formula.reverse), "term.labels")) == 1){
+                cvControl$model_type = "binary"
+            }else{
+                stop("You must specify model_type!")
+            }
+        }
         
         if(method != "neuralnet" & !is.factor(data[,Y])){
             data[,Y] <- factor(data[,Y])
@@ -76,38 +85,35 @@ train <-
         print(head(finalGrid))
         
         # fit the 'best' model on full dataset
-        mod <- try(
+        mod <- tryCatch({
             training(formula,
                      data = data, 
                      grid = finalGrid, 
                      method = method,
                      model_args = cvControl$model_args,
                      verbose = cvControl$verbose
-                ),
-            silent = TRUE)
-        
-        if(class(mod)[1] != "try-error")
-        {                        
-            # subset test data with only needed columns
-            testDataIVs <- testData[, mod$ivs]
-            
-            result <- try(
-                predicting(mod$modelFit, method = method, 
-                           newdata = testDataIVs, model_type = cvControl$model_type, cvControl$scale),
-                #HGmiscTools::compute(mod, testDataIVs, model_type=cvControl$model_type),            
-                silent = TRUE)
-        }else{
-            msg <- geterrmessage()
-            print(msg)
+                )
+        },
+        error = function(err){
+            print(paste0("Error: ", err))
             stop("Full model fit failed")
-        }
+        })
         
-        if(class(result)[1] == "try-error")
-        {
-            msg <- geterrmessage()
-            print(msg)
+
+        # subset test data with only needed columns
+        testDataIVs <- testData[, mod$ivs]
+
+        print("model type?")
+        print(cvControl$model_type)
+        
+        result <- tryCatch({
+            predicting(mod$modelFit, method = method, 
+                       newdata = testDataIVs, model_type = cvControl$model_type, cvControl$scale)
+        },
+        error = function(err){
+            print(paste0("Error: ", err))
             stop("Final Internal 'predict' function failed!")
-        }
+        })
         
         # some means of evaluating the model
         
@@ -168,19 +174,14 @@ internal_cv <-
         `%do%`
     }
     
+    print("check verbose")
+    print(verbose)
+    
     # get observed values/classes
     formula.reverse <- formula
     formula.reverse[[3]] <- formula[[2]]
     
     obs <- data[,attr(terms(formula.reverse), "term.labels")]
-    
-    if(is.null(model_type)){
-        if(length(attr(terms(formula.reverse), "term.labels")) == 1){
-            model_type = "binary"
-        }else{
-            stop("You must specify model_type!")
-        }
-    }
     
     levs <- levels(as.factor(obs))
     
@@ -208,7 +209,10 @@ internal_cv <-
 #         }
         
         mod <- tryCatch({
-            training(formula, data[inTrain[[iter]],, drop = FALSE], grid[param,, drop = FALSE], method, model_args, verbose)
+            training(formula, data[inTrain[[iter]],, drop = FALSE], 
+                     grid[param,, drop = FALSE], method, 
+                     model_args, 
+                     verbose = verbose)
         },
         error = function(err){
             print(paste0("Error: ", err))
@@ -295,60 +299,6 @@ internal_cv <-
     out <- list(means = means, variances = vars)
     return(out)
 
-}
-
-
-
-#' @title Control function for 'train'
-#' @description This function provides a means to consolidate additional
-#' parameters for the train function to avoid verbose input parameters.
-#' @param model_args A named list of additional arguements for the internal
-#' \code{neuralnet} call.  See \link[neuralnet]{neuralnet} for more details
-#' @param filter Boolean argument indicating if prediction results should
-#' be filtered
-#' @param filter_category A numeric value for the category filter if \code{filter}
-#' is \code{TRUE}
-#' @param verbose A boolean option for verbose model output
-#' @param save_models A boolean option to save the models created at each
-#' @param scale A boolean option whether to scale model results
-#' cross-validation step which can be subsequently loaded with \code{load} 
-#' @return A list of the additional internal parameters
-#' @export
-cvControl <- function(model_args, model_type, 
-                      filter = FALSE, filter_category = NULL, 
-                      verbose = FALSE,
-                      save_models=FALSE,
-                      scale = FALSE){
-    if(!missing(model_args)){
-        assert_is_list(model_args)
-    }else{
-        model_args <- NULL
-    }
-    
-    if(!missing(model_type)){
-        assert_is_character(model_type)
-    }else{
-        model_type <- NULL
-    }
-    
-    assert_is_logical(verbose)
-    assert_is_logical(save_models)
-    assert_is_logical(scale)
-    
-    if(filter){
-        assert_is_non_empty(filter_category)
-        assert_is_not_null(filter_category)
-        assert_all_are_in_closed_range(filter_category, lower = 4, upper = 7)
-    }
-    
-    out <- list(model_args=model_args,
-                model_type=model_type,
-                filter = list(filter = filter, 
-                              filter_category = if(filter) filter_category else NULL),
-                verbose = verbose,
-                save_models=save_models,
-                scale = scale)
-    return(out)
 }
 
 

@@ -4,6 +4,6 @@
 src/*.o
 src/*.so
 src/*.dll
-*.rda
+/*.rda
 tests/data/
 inst/doc
