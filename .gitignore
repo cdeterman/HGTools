@@ -6,4 +6,3 @@ src/*.so
 src/*.dll
 /*.rda
 tests/data/
-inst/doc
