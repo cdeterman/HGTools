@@ -1,34 +1,4 @@
 
-#' @title List Current Model Types
-#' @description The function provides a list of all currently implemented models
-#' and a brief description of each.
-#' @return A data.frame containing the following columns:
-#' \item{model_types}{Code for each model type}
-#' \item{description}{Brief detail for each model}
-#' @export
-model_types <- function(){
-  models <- c("payor", "binary")
-  labels <- c("Predicting Payor Types (Commercial, Medicare, Medicaid, & Self)",
-              "Generic Binary Model")
-  out <- data.frame(model_types = models, description = labels)
-  return(out)
-}
-
-
-#' @title List Current Activation Functions
-#' @description The function provides a list of all currently implemented
-#' activation functions and a brief description.
-#' @return A data.frame containing the following columns:
-#' \item{act_fct}{Code for each activation function}
-#' \item{description}{Brief detail for each model}
-#' @export
-act_fcts <- function(){
-  acts <- c("tanh", "logistic")
-  labels <- c("Hyperbolic Tangent", "Logistic")
-  out <- data.frame(act_fcts = acts, description = labels)
-  return(out)
-}
-
 #' @title Maximum correlations
 #' @description Returns which correlations in a correlation matrix are the highest.
 #' @param d A correlation matrix

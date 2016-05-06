@@ -21,8 +21,19 @@ using namespace std;
 //[[Rcpp::export]]
 List c_compute(
   List nn, 
-  NumericMatrix covariate_in) 
+  NumericMatrix covariate_in,
+  bool dropout,
+  double visible_dropout,
+  arma::vec hidden_dropout) 
   {
+//    double c_visible_dropout;
+//    arma::vec c_hidden_dropout;
+//    
+//    if(dropout){
+//        c_visible_dropout = as<double>(visible_dropout);
+//        c_hidden_dropout = as<arma::vec>(hidden_dropout);
+//    }
+      
 //    cout << "called c_compute" << endl;
     // convert to arma::mat
     int n = covariate_in.nrow(), k = covariate_in.ncol();
@@ -42,7 +53,14 @@ List c_compute(
     
     // declare activation function
     XPtr<nmfptr> xptr_act_fct = act_func(act_fct);
+    XPtr<nmfptr> xptr_output_fct = act_func(act_fct);
+    if(act_fct == "relu"){
+        //std::cout << "use logistic act.fct" << std::endl;
+        xptr_output_fct = act_func(String("logistic"));
+    }
+    
     nmfptr c_act_fct = *xptr_act_fct;
+    nmfptr c_output_fct = *xptr_output_fct;
     
 //    cout << "xptrs complte" << endl;
     
@@ -58,6 +76,12 @@ List c_compute(
       int tmp_ncol = tmp.ncol();
       nrow_weights[i] = tmp_nrow;
       ncol_weights[i] = tmp_ncol;
+    }
+    
+    if(dropout){
+        if(visible_dropout > 0){
+             covariate_arma = covariate_arma * visible_dropout;
+        }
     }
 
 //    cout << "passed all initializations" << endl;
@@ -75,6 +99,13 @@ List c_compute(
         arma::mat temp = as<arma::mat>(neurons[i]) * 
                         as<arma::mat>(weights[i]);
         arma::mat act_temp = c_act_fct(temp);
+        
+        if(dropout){
+            if(hidden_dropout[i] > 0){
+                act_temp = act_temp * hidden_dropout[i];
+            }
+        }
+        
         arma::mat tmp_ones = ones<arma::mat>(act_temp.n_rows, 1);
         neurons[i+1] = join_rows(tmp_ones, act_temp);
       }
@@ -84,10 +115,13 @@ List c_compute(
                       as<arma::mat>(weights[length_weights-1]);
                      
     arma::mat net_result;
+    
+//    std::cout << temp << std::endl;
+    
     if (linear_output) {
       net_result = temp;
     }else{
-      net_result = c_act_fct(temp);
+      net_result = c_output_fct(temp);
     } 
     
     // covert all neurons to SEXP objects

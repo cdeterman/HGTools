@@ -44,6 +44,10 @@ neuralnet(formula, data, ...)
 \item{constant.weights}{a vector specifying the values of the weights that are excluded from the training process and treated as fix.}
 
 \item{likelihood}{logical. If the error function is equal to the negative log-likelihood function, the information criteria AIC and BIC will be calculated. Furthermore the usage of confidence.interval is meaningfull.}
+
+\item{low_size}{logical. Specify if minimal neuralnet objects to be returned}
+
+\item{dropout}{logical. Specify if dropout should be used}
 }
 \value{
 \code{neuralnet} returns an object of class nn. An object of class nn is a list

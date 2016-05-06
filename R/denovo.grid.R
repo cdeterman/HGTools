@@ -14,8 +14,8 @@
 #' parameters for each model:
 #' @author Charles Determan Jr
 #' @seealso \code{"expand.grid"} for generating grids of specific 
-#' parameters desired.  However, NOTE that you must still convert 
-#' the generated grid to a list.
+#' parameters desired.  However, NOTE that you must still use the same
+#' arguments names prefixed with a '.'.
 #' @export
 denovo.grid <- 
     function(method,
@@ -96,3 +96,35 @@ rfTune <- function(
     }
     data.frame(.mtry = treeSeq)
 }
+
+
+#' @title Denovo Grid Generation
+#' @description Greates expanded grid for neuralnets
+#' @param res Resolution of the search grid
+#' @param act_fcts A character vector of activation functions
+#' @param dropout A boolean indicating if dropout iterations should be included
+#' @author Charles Determan Jr
+#' @seealso \code{\link{denovo.grid}} or \code{\link{"expand.grid"}} for generating grids 
+#' of specific parameters desired.  However, NOTE that you must still use the same
+#' arguments names prefixed with a '.'.
+#' @export
+denovo_neuralnet_grid <- 
+    function(res, act_fcts, dropout){
+        
+        assert_is_character(act_fcts)
+        
+        if(any(!act_fcts %in% act_fcts()$act_fcts)){
+            stop("Activation function provided not implemented")
+        }
+        
+        grid <- expand.grid(
+            .hidden = seq(from = 2, to = 2 + res),
+            .threshold = seq(from = 5, to = 1, length = res),
+            .act_fcts = act_fcts,
+            .dropout = dropout,
+            .visible_dropout = if(dropout){seq(from = 0, to=0.2, length = res)}else{0},
+            .hidden_dropout = if(dropout){seq(from=0.1, to=0.5, length=res)}else{0})
+        
+        
+        return(grid)
+    }

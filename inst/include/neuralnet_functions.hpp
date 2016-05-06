@@ -186,9 +186,15 @@ List c_compute_net(
   SEXP act_deriv_fct, 
   SEXP output_act_fct, 
   SEXP output_act_deriv_fct, 
-  bool special) 
+  bool special,
+  bool dropout = true,
+  double visible_dropout = 0,
+  arma::vec hidden_dropout = arma::zeros<vec>(1)) 
   {
-    //cout << "called c_compute_net" << endl;
+//    cout << "called c_compute_net" << endl;
+    
+//    std::cout << "check dropout" << std::endl;
+//    std::cout << dropout << std::endl;
     
 //    // convert DataFrame to arma::mat
 //    // first convert to NumericMatrix
@@ -219,12 +225,73 @@ List c_compute_net(
     List neurons(length_weights+1);
     neurons[0] = covariate;
     
+//    std::cout << "visible" << std::endl;
+//    std::cout << covariate.head_rows(10) << std::endl;
+    
+    // visible dropouts
+    if(dropout){
+        if(visible_dropout > 0){
+            // generate random 0,1 for dropout
+            // convert to Rcpp::NumericMatrix (fastest I have seen)
+            NumericVector draws = rbinom(covariate.size(), 1, 1-visible_dropout);
+            NumericMatrix binomMat = NumericMatrix(covariate.n_rows, covariate.n_cols, draws.begin());
+            
+            // convert to armadillo without copying memory 
+            // for fast multiplication using whichever BLAS installed
+            arma::mat armaBinomMat(binomMat.begin(), binomMat.rows(), binomMat.cols(), false);
+
+            //std::cout << "binomial sample" << std::endl;
+            //std::cout << armaBinomMat << std::endl;
+            
+            neurons[0] = covariate % armaBinomMat;
+        }
+    }
+    
+    {
+//        std::cout << "masked visible" << std::endl;
+//        arma::mat temp = neurons[0];
+//        std::cout << temp.head_rows(10) << std::endl;
+    }
+    
+    
     if (length_weights > 1) {
         for (int i=0; i < (length_weights - 1); i++) {
             arma::mat neurons_tmp = neurons[i];
             arma::mat weights_tmp = weights[i];
-            arma::mat temp = neurons_tmp*weights_tmp;            
+            arma::mat temp = neurons_tmp * weights_tmp;            
             arma::mat act_temp = c_act_fct(temp);
+            
+            arma::uvec negs = arma::find(act_temp < 0);
+            
+            
+            if(negs.n_elem > 0){
+                stop("shouldn't be any negative elements");
+            }
+            
+//            std::cout << "activations" << std::endl;
+//            std::cout << act_temp.head_rows(10) << std::endl;
+            
+            // hidden dropouts
+            if(dropout){
+                if(hidden_dropout[i] > 0){
+                    // generate random 0,1 for dropout
+                    // convert to Rcpp::NumericMatrix (fastest I have seen)
+                    NumericVector draws = rbinom(act_temp.size(), 1, 1-hidden_dropout[i]);
+                    NumericMatrix binomMat = NumericMatrix(act_temp.n_rows, act_temp.n_cols, draws.begin());
+                    
+                    // convert to armadillo without copying memory 
+                    // for fast multiplication using whichever BLAS installed
+                    arma::mat armaBinomMat(binomMat.begin(), binomMat.rows(), binomMat.cols(), false);
+        
+                    //std::cout << "binomial sample" << std::endl;
+                    //std::cout << armaBinomMat << std::endl;
+                    
+                    act_temp = act_temp % armaBinomMat;
+                }
+            }
+            
+//            std::cout << "new activations" << std::endl;
+//            std::cout << act_temp.head_rows(10) << std::endl;
 
             if (special) {
                 neuron_deriv[i] = c_act_deriv_fct(act_temp);
@@ -236,7 +303,7 @@ List c_compute_net(
         }
     }
     
-    //cout << "passed length_weights condition" << endl;
+//    cout << "passed length_weights condition" << endl;
     
 //    cout << "neurons list" << endl;
 //    for(int i=0; i < neurons.size(); i++){
@@ -254,7 +321,7 @@ List c_compute_net(
 //    cout << "temp" << endl;
 //    Rcout << temp.submat(0,0,5,0) << endl;
     
-    //cout << "passed neuron arma matrices" << endl;
+//    cout << "passed neuron arma matrices" << endl;
     
     arma::mat net_result = c_output_act_fct(temp);
     if (special) {
@@ -264,6 +331,8 @@ List c_compute_net(
     }else{
       neuron_deriv[length_weights-1] = c_output_act_deriv_fct(temp);
     }
+    
+//    std::cout << "got neuron derivs" << std::endl;
     
 //    if (any(is.na(neuron.deriv))) {
 //      stop("neuron derivatives contain a NA; varify that the derivative function does not divide by 0", 
@@ -462,6 +531,33 @@ List c_plus(
 
 
 inline
+List c_backprop(
+    arma::vec gradients, 
+    List weights, 
+    arma::ivec nrow_weights, 
+    arma::ivec ncol_weights, 
+    double learningrate_bp, 
+    SEXP exclude)
+{
+    //weights <- unlist(weights)
+    arma::vec weights_vec = c_unlist(weights);
+    
+    if (!Rf_isNull(exclude)){
+        stop("exclude not yet implemented");
+        //weights_vec[-exclude] <- weights_vec[-exclude] - gradients * learningrate_bp
+    }else{
+        weights_vec = weights_vec - gradients * learningrate_bp;
+    } 
+//    list(gradients.old = gradients, weights = relist(weights, 
+//        nrow.weights, ncol.weights), learningrate = learningrate_bp)
+        
+    return List::create(Named("gradients_old") = gradients, 
+                        Named("weights") = c_relist(weights_vec, nrow_weights, ncol_weights),
+                        Named("learningrate") = learningrate_bp);
+}
+
+
+inline
 List c_rprop(
   List weights,
   arma::mat response, // big.matrix
@@ -481,7 +577,10 @@ List c_rprop(
   String algorithm, 
   bool linear_output, 
   SEXP exclude, 
-  SEXP learningrate_bp) 
+  double learningrate_bp,
+  bool dropout,
+  double visible_dropout,
+  arma::vec hidden_dropout) 
 {   
 //    cout << "called c_prop" << endl;
   
@@ -501,7 +600,7 @@ List c_rprop(
     XPtr<nmfptr> xptr_output_act_fct = xptr_act_fct;
     XPtr<nmfptr> xptr_output_act_deriv_fct = xptr_act_deriv_fct;
     
-    //cout << "declared output xptrs" << endl;
+//    cout << "declared output xptrs" << endl;
     
     // declare integer vectors
     arma::ivec nrow_weights = arma::zeros<ivec>(length_weights);
@@ -525,7 +624,7 @@ List c_rprop(
       c_exclude = length_unlist + 1;
     }
     
-    if(act_fct_name == "tanh" || act_fct_name == "logistic"){
+    if(act_fct_name == "tanh" || act_fct_name == "logistic" || act_fct_name == "relu"){
       special = true;
     }else{
       special = false;
@@ -540,8 +639,27 @@ List c_rprop(
           linear_output = true;
         }
         
-        //xptr_output_act_fct = xptr_act_fct;
-        //xptr_output_act_deriv_fct = xptr_act_deriv_fct;
+        if( err_fct_name == "ce" && act_fct_name == "relu" ){
+          xptr_err_deriv_fct = err_deriv_func("ce_log", response);
+          linear_output = true;
+        }
+        
+        if( act_fct_name == "relu" ){
+            if( response.n_cols < 2){
+                //Rcout << "using logistic function for binary problem" << std::endl;
+                xptr_output_act_fct = act_func(String("logistic"));
+                xptr_output_act_deriv_fct = act_func(String("logistic"));
+                //xptr_output_act_fct = XPtr<nmfptr>(new nmfptr(&output_func_linear));
+                //xptr_output_act_deriv_fct = XPtr<nmfptr>(new nmfptr(&output_deriv_func_linear));
+            }else{
+                //multinomial problems use softmax
+                stop("softmax not yet implemented for multinomial problems");
+            }
+        }else{
+            //Rcout << "using native activation function" << std::endl;
+            xptr_output_act_fct = xptr_act_fct;
+            xptr_output_act_deriv_fct = xptr_act_deriv_fct;
+        }
     }
  
 //    cout << "first compute_net" << endl;
@@ -552,7 +670,10 @@ List c_rprop(
                           xptr_act_deriv_fct, 
                           xptr_output_act_fct, 
                           xptr_output_act_deriv_fct, 
-                          special);
+                          special,
+                          dropout,
+                          visible_dropout,
+                          hidden_dropout);
   
     // make err XPtr functional
     nmfptr2 c_err_deriv_fct = *xptr_err_deriv_fct;
@@ -600,12 +721,14 @@ List c_rprop(
                          nrow_weights, ncol_weights, learningrate, 
                          learningrate_factor, 
                          learningrate_limit, exclude);
+        }else{
+          if (algorithm == "backprop") {
+//              std::cout << "calling backprop" << std::endl;
+              result = c_backprop(gradients, weights,
+                               nrow_weights, ncol_weights, learningrate_bp, 
+                               exclude);
+          }
         }//else{
-//          if (algorithm == "backprop") {
-//            result <- backprop(gradients, weights, length.weights, 
-//                               nrow.weights, ncol.weights, learningrate.bp, 
-//                               exclude)
-//          }else{
 //            result <- minus(gradients, gradients.old, weights, 
 //                            length.weights, nrow.weights, ncol.weights, learningrate, 
 //                            learningrate.factor, learningrate.limit, algorithm, 
@@ -613,6 +736,8 @@ List c_rprop(
 //          } 
 //        } 
 //        
+//        std::cout << "algorithm completed" << std::endl;
+        
         gradients_old = as<arma::vec>(result["gradients_old"]);
 //        cout << "old gradients" << endl;
 //        Rcout << gradients_old << endl;
@@ -625,6 +750,7 @@ List c_rprop(
 //        }
         
         learningrate = as<arma::vec>(result["learningrate"]);
+//        std::cout << "learningrate pulled" << std::endl;
         
         result = c_compute_net(weights, length_weights, 
                               covariate, // big.matrix
@@ -632,7 +758,10 @@ List c_rprop(
                               xptr_act_deriv_fct, 
                               xptr_output_act_fct, 
                               xptr_output_act_deriv_fct,
-                              special);
+                              special,
+                              dropout,
+                              visible_dropout,
+                              hidden_dropout);
                               
 //        arma::mat tmp_arma = as<arma::mat>(result["net_result"]);
 //        cout << "rprop inside net.result" << endl;

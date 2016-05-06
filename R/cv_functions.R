@@ -18,12 +18,52 @@ train <-
         assert_all_are_positive(k)
         assert_is_data.frame(grid)
         
+        if(method == "neuralnet"){
+            
+            if(".act_fcts" %in% colnames(grid)){
+                if(!is.character(grid$.act_fcts)){
+                    grid$.act_fcts <- as.character(grid$.act_fcts)
+                }
+            }
+            
+            if((".dropout" %in% colnames(grid))){
+                if(any(!c(".visible_dropout", ".hidden_dropout") %in% colnames(grid))){
+                    stop("grid states to use dropout but visible and/or hidden dropout parameter is missing")
+                }
+                
+                # subset to iters with Dropout
+                dropout_iters <- grid[grid$dropout == TRUE,]
+                if(nrow(dropout_iters) > 0){
+                    # subset to those with multiple layers
+                    multiLayerCounts <- nchar(grid$.hidden) > 1
+                    multiLayerIters <- dropout_iters[multiLayerCounts,]
+                    
+                    # make sure length of hidden_dropout matches hidden layers
+                    if(nrow(multiLayerIters) > 0){
+                        numDropoutLayers <- sapply(multiLayerIters$.hidden_dropout, function(x){
+                            length(unlist(strsplit(x, split=",")))
+                        })
+                        numLayers <- sapply(multiLayerIters$.hidden, function(x){
+                            length(unlist(strsplit(x, split=",")))
+                        })
+                        if(any(numDropoutLayers != numLayers)){
+                            stop("Length of .hidden_dropout must match .hidden")
+                        }
+                    }
+                }
+                
+            } 
+        }
+        
+        
+        
         if(is.null(cvControl)) cvControl = cvControl()
         nr <- nrow(data)
         
         # may only need for neuralnet, perhaps hide under some validation function
         if(is.null(cvControl$model_type)){
-            if(length(attr(terms(formula.reverse), "term.labels")) == 1){
+            #if(length(attr(terms(formula.reverse), "term.labels")) == 1){
+            if(length(dvs) == 1){
                 cvControl$model_type = "binary"
             }else{
                 stop("You must specify model_type!")
@@ -66,23 +106,42 @@ train <-
             allowParallel,
             scale = cvControl$scale) 
         
-        print("internal cv complete")
+        #print("internal cv complete")
+
+        for(g in seq(ncol(grid))){
+            perfMatrix$means[,g] <- as(perfMatrix$means[,g], class(grid[,g]))
+            perfMatrix$variances[,g] <- as(perfMatrix$variances[,g], class(grid[,g]))
+        }
         
         # sort performance matrix
         perfMatrix$means <- byComplexity(perfMatrix$means, method)
         perfMatrix$variances <- byComplexity(perfMatrix$variances, method)
         
-        print(perfMatrix)
+        #print(perfMatrix)
         
         # get the winner
         bestMod <- perfMatrix$means[bestFit(perfMatrix$means, metric, TRUE),]
         
+        #finalGrid <- grid[0,]
+        #print("empty finalGrid to fill")
+        #print(str(finalGrid))
+
         args_idx <- which(colnames(bestMod) == "AUC")
-        finalGrid <- as.data.frame(bestMod[,1:(args_idx - 1)])
+
+        finalGrid <- bestMod[,1:(args_idx - 1)]
+
+        #print("source grid str")
+        #print(str(grid))
+
+#         for(g in seq(ncol(grid))){
+#             finalGrid[,g] <- as(finalGrid[,g], class(grid[,g]))
+#         }
         colnames(finalGrid) <- names(grid)
-#         colnames(finalGrid) <- gsub("\\.", "", names(grid))
         
-        print(head(finalGrid))
+#         # convert all to character
+        #print("the finalGrid")
+        #print(str(finalGrid))
+#         finalGrid <- lapply(finalGrid, as.character)
         
         # fit the 'best' model on full dataset
         mod <- tryCatch({
@@ -95,7 +154,7 @@ train <-
                 )
         },
         error = function(err){
-            print(paste0("Error: ", err))
+            print(err)
             stop("Full model fit failed")
         })
         
@@ -103,15 +162,15 @@ train <-
         # subset test data with only needed columns
         testDataIVs <- testData[, mod$ivs]
 
-        print("model type?")
-        print(cvControl$model_type)
+        #print("model type?")
+        #print(cvControl$model_type)
         
         result <- tryCatch({
             predicting(mod$modelFit, method = method, 
                        newdata = testDataIVs, model_type = cvControl$model_type, cvControl$scale)
         },
         error = function(err){
-            print(paste0("Error: ", err))
+            print(paste0(err))
             stop("Final Internal 'predict' function failed!")
         })
         
@@ -119,7 +178,7 @@ train <-
         
         # possibly use scale01 for results???
 
-        print(class(result))
+        #print(class(result))
         
 #         if(method == "neuralnet"){
 #             pred <- switch(class(result),
@@ -215,7 +274,7 @@ internal_cv <-
                      verbose = verbose)
         },
         error = function(err){
-            print(paste0("Error: ", err))
+            print(err)
             stop("Internal model fit failed!")
         })
             
@@ -239,23 +298,23 @@ internal_cv <-
             #silent = TRUE
         },
         error = function(err){
-            print(paste0("Error: ", err))
+            print(err)
             stop("Internal model prediction failed!")
         })
         
         # some means of evaluating the model
         
-        print("evaluate fold results")
+#         print("evaluate fold results")
 #         print(head(obs[outTrain[[iter]]]))
 #         print(head(factor(result, levels = levs)))
         
-        print(predictionStats(obs[outTrain[[iter]]], result))
-        print("grid param")
-        print(grid[param,])
+#         print(predictionStats(obs[outTrain[[iter]]], result))
+#         print("grid param")
+#         print(grid[param,])
 
         out <- c(grid[param,], predictionStats(obs[outTrain[[iter]]], result))
 
-        print(out)
+#         print(out)
         
         out
     } 
@@ -264,7 +323,7 @@ internal_cv <-
                 "AUC", "Sensitivity", "Specificity",
                 "PPV", "NPV", "F1-Score")        
 
-    print(finalMetrics)
+    #print(finalMetrics)
     
     # Take average performance across folds
     tmp <- lapply(finalMetrics, FUN=function(x) matrix(unlist(x[,(ncol(grid)+1):ncol(x)]), nrow=nrow(grid)))

@@ -18,11 +18,11 @@ predicting <- function(modelFit, method, newdata, model_type = NULL, model_args 
 {
 #     if(any(colnames(newdata) == ".classes")) newdata$.classes <- NULL
     
-    print("trying to predict")
-    print(method)
-    print(model_type)
-    print(model_args)
-    print(dim(newdata))
+#     print("trying to predict")
+#     print(method)
+#     print(model_type)
+#     print(model_args)
+#     print(dim(newdata))
     
 #     stop("stopping")
     
@@ -31,10 +31,10 @@ predicting <- function(modelFit, method, newdata, model_type = NULL, model_args 
                
         neuralnet = 
         {
-            print("about to 'compute'")
-            result <- HGmiscTools::compute(modelFit, covariate = newdata, model_type=model_type)
+#             print("about to 'compute'")
+            result <- HGTools::compute(modelFit, covariate = newdata, model_type=model_type)
             
-            print('compute passed')
+#             print('compute passed')
             # possibly use scale01 for results???
             if(model_type == "binary"){
                 if(scale){

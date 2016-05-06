@@ -117,7 +117,10 @@ List c_calculate_neuralnet(
   SEXP likelihood, 
   SEXP exclude, 
   SEXP constant_weights, 
-  SEXP learningrate_bp) 
+  SEXP learningrate_bp,
+  SEXP dropout,
+  SEXP visible_dropout,
+  SEXP hidden_dropout) 
 {
 //    cout << "called calculate_neuralnet" << endl;
     
@@ -126,13 +129,24 @@ List c_calculate_neuralnet(
     int c_rep = as<int>(rep);
     int c_lifesign_step = as<int>(lifesign_step);
     double c_threshold = as<double>(threshold);
+    bool c_dropout = as<bool>(dropout);
+    double c_visible_dropout;
+    arma::vec c_hidden_dropout;
     
+    double c_learningrate_bp;
+    if(!Rf_isNull(learningrate_bp)){
+        c_learningrate_bp = as<double>(learningrate_bp);
+    }
+    
+    if(c_dropout){
+        c_visible_dropout = as<double>(visible_dropout);
+        c_hidden_dropout = as<arma::vec>(hidden_dropout);
+    }
+        
 //    cout << "initialized numbers" << endl;
     
 //    const String c_lifesign(lifesign);
 //    const String c_algorithm(algorithm);
-    
-//    cout << "*$^#%* strings initialized" << endl;
     
     //String act_fct_name = act_fct;  // need the name of the method for later
     //String err_fct_name = err_fct;  // need the name of the method for later
@@ -172,8 +186,19 @@ List c_calculate_neuralnet(
     //time_start_local <- localtime(&result);
     //const clock_t begin_time = clock();
     
-    XPtr<nmfptr2> xptr_err_fct = err_func(err_fct_name, response_arma);
+//    XPtr<nmfptr2> xptr_err_fct = err_func(err_fct_name, response_arma);
+//    nmfptr2 c_err_fct = *xptr_err_fct;
+
+    XPtr<nmfptr2> xptr_err_fct(err_fct);
     nmfptr2 c_err_fct = *xptr_err_fct;
+    
+//    std::cout << "check relu ce" << std::endl;
+    
+//    if( act_fct_name == "relu" && err_fct_name == "ce" ){
+//        Rcout << "relu ce log" << std::endl;
+//        XPtr<nmfptr2> xptr_err_ce_log_fct = err_func("ce_log", response_arma);
+//        c_err_fct = *xptr_err_ce_log_fct;
+//    }
     
 //    cout << "Initialized xptr" << endl;
     
@@ -220,9 +245,11 @@ List c_calculate_neuralnet(
                     act_fct, act_deriv_fct, act_fct_name, 
                     err_fct, err_deriv_fct, err_fct_name,
                     algorithm, c_linear_output, 
-                    exclude, learningrate_bp);
+                    exclude, c_learningrate_bp,
+                    c_dropout, c_visible_dropout,
+                    c_hidden_dropout);
                     
-    //cout << "finished r_prop" << endl;
+//    cout << "finished r_prop" << endl;
                     
     List dx_startweights = weights;
     weights = result["weights"];
@@ -240,28 +267,33 @@ List c_calculate_neuralnet(
 //      Rcout << as<arma::mat>(weights[w]) << endl;
 //    }
 //    
-//    cout << "net.result" << endl;
+//    Rcout << net_result << std::endl;
 //    Rcout << net_result.submat(0,0,5,0) << endl;
 //    
-//    cout << "response" << endl;
+//    Rcout << "response" << endl;
 //    Rcout << response_arma.submat(0,0,5,0);
 //
-//    cout << "err.fct output" << endl;
+//    Rcout << "err.fct output" << endl;
 //    arma::mat tmp_out = c_err_fct(net_result, response_arma);
+//    Rcout << tmp_out << std::endl;
 //    Rcout << tmp_out.submat(0,0,5,0)  << endl;
+
+//    cout << "diffs" << endl;
+//    cout << net_result - response_arma << std::endl;
     
     double error = sum(sum(c_err_fct(net_result, response_arma)));
 //    cout << "error calculation successful" << endl;
 //    cout << error << endl;
     
     if (std::isnan(error) & (err_fct_name == "ce")) {
-        stop("error is na, method to remove na values in progress");
-//        cout << "error is na, method to remove na values in progress" << endl;
-//        return 0;
-//      if (all(net_result <= 1, net_result >= 0)) {
-//        // need method to remove na values (e.g. na.rm=T)
-//        error = sum(sum(c_err_fct(net_result, response)))       
-//      }
+        //stop("error is na, method to remove na values in progress");
+        
+        arma::mat tmp_errs = c_err_fct(net_result, response_arma);
+        // change non-finite elements to zero
+        tmp_errs.elem( find_nonfinite(tmp_errs) ).zeros();
+        
+        // re-sum error values
+        error = sum(sum(tmp_errs));
     }
         
 //    if (!is.null(constant_weights) && any(constant_weights != 0)) {

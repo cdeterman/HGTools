@@ -17,4 +17,14 @@ arma::mat output_deriv_func_linear ( arma::mat x ){
   return ret;
 }
 
+inline
+arma::mat output_func_softmax ( arma::mat x ){
+// for multinomial problems
+}
+
+inline
+arma::mat output_deriv_func_softmax ( arma::mat x ){
+// derivative for multinomial problems
+}
+
 #endif

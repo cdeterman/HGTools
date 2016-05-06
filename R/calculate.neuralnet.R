@@ -22,7 +22,10 @@ calculate.neuralnet <-
              likelihood, 
              exclude, 
              constant.weights, 
-             learningrate.bp) 
+             learningrate.bp,
+             dropout,
+             visible_dropout,
+             hidden_dropout) 
 {
         # get starting time
         time.start.local <- Sys.time()
@@ -43,7 +46,9 @@ calculate.neuralnet <-
                         lifesign = lifesign, lifesign.step = lifesign.step, act.fct = act.fct, 
                         act.deriv.fct = act.deriv.fct, err.fct = err.fct, err.deriv.fct = err.deriv.fct, 
                         algorithm = algorithm, linear.output = linear.output, 
-                        exclude = exclude, learningrate.bp = learningrate.bp)
+                        exclude = exclude, learningrate.bp = learningrate.bp,
+                        dropout = dropout, visible_dropout = visible_dropout,
+                        hidden_dropout = hidden_dropout)
         startweights <- weights
         weights <- result$weights
         step <- result$step

@@ -31,7 +31,7 @@ Charles Determan Jr
 }
 \seealso{
 \code{"expand.grid"} for generating grids of specific
-parameters desired.  However, NOTE that you must still convert
-the generated grid to a list.
+parameters desired.  However, NOTE that you must still use the same
+arguments names prefixed with a '.'.
 }
 

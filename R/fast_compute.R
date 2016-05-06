@@ -20,7 +20,8 @@ fast_compute <-
     if(is.big.matrix(covariate)){
       result <- c_compute_bm(x, covariate@address)
     }else{
-      result <- c_compute(x, as.matrix(covariate))
+      result <- c_compute(x, as.matrix(covariate), 
+                          x$dropout, x$visible_dropout, x$hidden_dropout)
     }
 #     out <- new(model_type, 
 #                neurons=result$neurons, net.result=result$net.result)

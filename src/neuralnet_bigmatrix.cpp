@@ -141,7 +141,10 @@ List c_calculate_neuralnet_bm(
   SEXP likelihood, 
   SEXP exclude, 
   SEXP constant_weights, 
-  SEXP learningrate_bp) 
+  double learningrate_bp,
+  SEXP dropout,
+  SEXP visible_dropout,
+  SEXP hidden_dropout) 
 {
 //    cout << "called calculate_neuralnet" << endl;
     
@@ -152,6 +155,9 @@ List c_calculate_neuralnet_bm(
     double c_threshold = as<double>(threshold);
     bool c_linear_output = as<bool>(linear_output);
     bool c_likelihood = as<bool>(likelihood);
+    bool c_dropout = as<bool>(dropout);
+    double c_visible_dropout = as<double>(visible_dropout);
+    arma::vec c_hidden_dropout = as<arma::vec>(hidden_dropout);
     
     // Deal with BigMatrix objects
     XPtr<BigMatrix> xpResponse(response);
@@ -231,7 +237,9 @@ List c_calculate_neuralnet_bm(
                     act_fct, act_deriv_fct, act_fct_name, 
                     err_fct, err_deriv_fct, err_fct_name,
                     algorithm, c_linear_output, 
-                    exclude, learningrate_bp);
+                    exclude, learningrate_bp,
+                    c_dropout,
+                    c_visible_dropout, c_hidden_dropout);
                     
 //    cout << "finished r_prop" << endl;
                     

@@ -7,14 +7,17 @@
 using namespace Rcpp;
 
 // c_compute
-List c_compute(List nn, NumericMatrix covariate_in);
-RcppExport SEXP HGTools_c_compute(SEXP nnSEXP, SEXP covariate_inSEXP) {
+List c_compute(List nn, NumericMatrix covariate_in, bool dropout, double visible_dropout, arma::vec hidden_dropout);
+RcppExport SEXP HGTools_c_compute(SEXP nnSEXP, SEXP covariate_inSEXP, SEXP dropoutSEXP, SEXP visible_dropoutSEXP, SEXP hidden_dropoutSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
     Rcpp::traits::input_parameter< List >::type nn(nnSEXP);
     Rcpp::traits::input_parameter< NumericMatrix >::type covariate_in(covariate_inSEXP);
-    __result = Rcpp::wrap(c_compute(nn, covariate_in));
+    Rcpp::traits::input_parameter< bool >::type dropout(dropoutSEXP);
+    Rcpp::traits::input_parameter< double >::type visible_dropout(visible_dropoutSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type hidden_dropout(hidden_dropoutSEXP);
+    __result = Rcpp::wrap(c_compute(nn, covariate_in, dropout, visible_dropout, hidden_dropout));
     return __result;
 END_RCPP
 }
@@ -45,8 +48,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // c_calculate_neuralnet
-List c_calculate_neuralnet(DataFrame data, List model_list, IntegerVector hidden, SEXP stepmax, SEXP rep, SEXP threshold, List learningrate_limit, List learningrate_factor, const String lifesign, DataFrame covariate, DataFrame response, SEXP lifesign_step, SEXP startweights, const String algorithm, SEXP act_fct, SEXP act_deriv_fct, String act_fct_name, SEXP err_fct, SEXP err_deriv_fct, String err_fct_name, SEXP linear_output, SEXP likelihood, SEXP exclude, SEXP constant_weights, SEXP learningrate_bp);
-RcppExport SEXP HGTools_c_calculate_neuralnet(SEXP dataSEXP, SEXP model_listSEXP, SEXP hiddenSEXP, SEXP stepmaxSEXP, SEXP repSEXP, SEXP thresholdSEXP, SEXP learningrate_limitSEXP, SEXP learningrate_factorSEXP, SEXP lifesignSEXP, SEXP covariateSEXP, SEXP responseSEXP, SEXP lifesign_stepSEXP, SEXP startweightsSEXP, SEXP algorithmSEXP, SEXP act_fctSEXP, SEXP act_deriv_fctSEXP, SEXP act_fct_nameSEXP, SEXP err_fctSEXP, SEXP err_deriv_fctSEXP, SEXP err_fct_nameSEXP, SEXP linear_outputSEXP, SEXP likelihoodSEXP, SEXP excludeSEXP, SEXP constant_weightsSEXP, SEXP learningrate_bpSEXP) {
+List c_calculate_neuralnet(DataFrame data, List model_list, IntegerVector hidden, SEXP stepmax, SEXP rep, SEXP threshold, List learningrate_limit, List learningrate_factor, const String lifesign, DataFrame covariate, DataFrame response, SEXP lifesign_step, SEXP startweights, const String algorithm, SEXP act_fct, SEXP act_deriv_fct, String act_fct_name, SEXP err_fct, SEXP err_deriv_fct, String err_fct_name, SEXP linear_output, SEXP likelihood, SEXP exclude, SEXP constant_weights, SEXP learningrate_bp, SEXP dropout, SEXP visible_dropout, SEXP hidden_dropout);
+RcppExport SEXP HGTools_c_calculate_neuralnet(SEXP dataSEXP, SEXP model_listSEXP, SEXP hiddenSEXP, SEXP stepmaxSEXP, SEXP repSEXP, SEXP thresholdSEXP, SEXP learningrate_limitSEXP, SEXP learningrate_factorSEXP, SEXP lifesignSEXP, SEXP covariateSEXP, SEXP responseSEXP, SEXP lifesign_stepSEXP, SEXP startweightsSEXP, SEXP algorithmSEXP, SEXP act_fctSEXP, SEXP act_deriv_fctSEXP, SEXP act_fct_nameSEXP, SEXP err_fctSEXP, SEXP err_deriv_fctSEXP, SEXP err_fct_nameSEXP, SEXP linear_outputSEXP, SEXP likelihoodSEXP, SEXP excludeSEXP, SEXP constant_weightsSEXP, SEXP learningrate_bpSEXP, SEXP dropoutSEXP, SEXP visible_dropoutSEXP, SEXP hidden_dropoutSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
@@ -75,7 +78,10 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< SEXP >::type exclude(excludeSEXP);
     Rcpp::traits::input_parameter< SEXP >::type constant_weights(constant_weightsSEXP);
     Rcpp::traits::input_parameter< SEXP >::type learningrate_bp(learningrate_bpSEXP);
-    __result = Rcpp::wrap(c_calculate_neuralnet(data, model_list, hidden, stepmax, rep, threshold, learningrate_limit, learningrate_factor, lifesign, covariate, response, lifesign_step, startweights, algorithm, act_fct, act_deriv_fct, act_fct_name, err_fct, err_deriv_fct, err_fct_name, linear_output, likelihood, exclude, constant_weights, learningrate_bp));
+    Rcpp::traits::input_parameter< SEXP >::type dropout(dropoutSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type visible_dropout(visible_dropoutSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type hidden_dropout(hidden_dropoutSEXP);
+    __result = Rcpp::wrap(c_calculate_neuralnet(data, model_list, hidden, stepmax, rep, threshold, learningrate_limit, learningrate_factor, lifesign, covariate, response, lifesign_step, startweights, algorithm, act_fct, act_deriv_fct, act_fct_name, err_fct, err_deriv_fct, err_fct_name, linear_output, likelihood, exclude, constant_weights, learningrate_bp, dropout, visible_dropout, hidden_dropout));
     return __result;
 END_RCPP
 }
@@ -96,8 +102,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // c_calculate_neuralnet_bm
-List c_calculate_neuralnet_bm(SEXP data, List model_list, IntegerVector hidden, SEXP stepmax, SEXP rep, SEXP threshold, List learningrate_limit, List learningrate_factor, const String lifesign, SEXP covariate, SEXP response, SEXP lifesign_step, SEXP startweights, const String algorithm, SEXP act_fct, SEXP act_deriv_fct, String act_fct_name, SEXP err_fct, SEXP err_deriv_fct, String err_fct_name, SEXP linear_output, SEXP likelihood, SEXP exclude, SEXP constant_weights, SEXP learningrate_bp);
-RcppExport SEXP HGTools_c_calculate_neuralnet_bm(SEXP dataSEXP, SEXP model_listSEXP, SEXP hiddenSEXP, SEXP stepmaxSEXP, SEXP repSEXP, SEXP thresholdSEXP, SEXP learningrate_limitSEXP, SEXP learningrate_factorSEXP, SEXP lifesignSEXP, SEXP covariateSEXP, SEXP responseSEXP, SEXP lifesign_stepSEXP, SEXP startweightsSEXP, SEXP algorithmSEXP, SEXP act_fctSEXP, SEXP act_deriv_fctSEXP, SEXP act_fct_nameSEXP, SEXP err_fctSEXP, SEXP err_deriv_fctSEXP, SEXP err_fct_nameSEXP, SEXP linear_outputSEXP, SEXP likelihoodSEXP, SEXP excludeSEXP, SEXP constant_weightsSEXP, SEXP learningrate_bpSEXP) {
+List c_calculate_neuralnet_bm(SEXP data, List model_list, IntegerVector hidden, SEXP stepmax, SEXP rep, SEXP threshold, List learningrate_limit, List learningrate_factor, const String lifesign, SEXP covariate, SEXP response, SEXP lifesign_step, SEXP startweights, const String algorithm, SEXP act_fct, SEXP act_deriv_fct, String act_fct_name, SEXP err_fct, SEXP err_deriv_fct, String err_fct_name, SEXP linear_output, SEXP likelihood, SEXP exclude, SEXP constant_weights, double learningrate_bp, SEXP dropout, SEXP visible_dropout, SEXP hidden_dropout);
+RcppExport SEXP HGTools_c_calculate_neuralnet_bm(SEXP dataSEXP, SEXP model_listSEXP, SEXP hiddenSEXP, SEXP stepmaxSEXP, SEXP repSEXP, SEXP thresholdSEXP, SEXP learningrate_limitSEXP, SEXP learningrate_factorSEXP, SEXP lifesignSEXP, SEXP covariateSEXP, SEXP responseSEXP, SEXP lifesign_stepSEXP, SEXP startweightsSEXP, SEXP algorithmSEXP, SEXP act_fctSEXP, SEXP act_deriv_fctSEXP, SEXP act_fct_nameSEXP, SEXP err_fctSEXP, SEXP err_deriv_fctSEXP, SEXP err_fct_nameSEXP, SEXP linear_outputSEXP, SEXP likelihoodSEXP, SEXP excludeSEXP, SEXP constant_weightsSEXP, SEXP learningrate_bpSEXP, SEXP dropoutSEXP, SEXP visible_dropoutSEXP, SEXP hidden_dropoutSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
@@ -125,8 +131,11 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< SEXP >::type likelihood(likelihoodSEXP);
     Rcpp::traits::input_parameter< SEXP >::type exclude(excludeSEXP);
     Rcpp::traits::input_parameter< SEXP >::type constant_weights(constant_weightsSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type learningrate_bp(learningrate_bpSEXP);
-    __result = Rcpp::wrap(c_calculate_neuralnet_bm(data, model_list, hidden, stepmax, rep, threshold, learningrate_limit, learningrate_factor, lifesign, covariate, response, lifesign_step, startweights, algorithm, act_fct, act_deriv_fct, act_fct_name, err_fct, err_deriv_fct, err_fct_name, linear_output, likelihood, exclude, constant_weights, learningrate_bp));
+    Rcpp::traits::input_parameter< double >::type learningrate_bp(learningrate_bpSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type dropout(dropoutSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type visible_dropout(visible_dropoutSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type hidden_dropout(hidden_dropoutSEXP);
+    __result = Rcpp::wrap(c_calculate_neuralnet_bm(data, model_list, hidden, stepmax, rep, threshold, learningrate_limit, learningrate_factor, lifesign, covariate, response, lifesign_step, startweights, algorithm, act_fct, act_deriv_fct, act_fct_name, err_fct, err_deriv_fct, err_fct_name, linear_output, likelihood, exclude, constant_weights, learningrate_bp, dropout, visible_dropout, hidden_dropout));
     return __result;
 END_RCPP
 }

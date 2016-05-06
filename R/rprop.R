@@ -5,7 +5,7 @@ rprop <-
               threshold, learningrate.limit, 
               learningrate.factor, stepmax, lifesign, lifesign.step, act.fct, 
               act.deriv.fct, err.fct, err.deriv.fct, algorithm, linear.output, 
-              exclude, learningrate.bp) 
+              exclude, learningrate.bp, dropout, visible_dropout, hidden_dropout) 
     {
         step <- 1
         nchar.stepmax <- max(nchar(stepmax), 7)

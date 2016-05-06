@@ -21,16 +21,19 @@ fast_neuralnet <-
             exclude = NULL, 
             constant.weights = NULL, 
             likelihood = FALSE,
-            low_size = TRUE) 
+            low_size = TRUE,
+            dropout = FALSE,
+            visible_dropout = 0,
+            hidden_dropout = rep(0, length(hidden))) 
 {
     call <- match.call()
     options(scipen = 100, digits = 10)
     
     # verify inputs are appropriate
-    result <- varify.variables(data, formula, startweights, learningrate.limit, 
+    result <- verify.variables(data, formula, startweights, learningrate.limit, 
                                learningrate.factor, learningrate, lifesign, algorithm, 
                                threshold, lifesign.step, hidden, rep, stepmax, err.fct, 
-                               act.fct)
+                               act.fct, dropout, visible_dropout, hidden_dropout)
     data <- result$data
     formula <- result$formula
     startweights <- result$startweights
@@ -72,6 +75,7 @@ fast_neuralnet <-
       
       # calculate neuralnet scores 
       #set.seed(123)
+#       print("calling calculate")
       result <-
         c_calculate_neuralnet(
           data, # big.matrix
@@ -94,7 +98,10 @@ fast_neuralnet <-
           likelihood, 
           exclude, 
           constant.weights, 
-          learningrate.bp)
+          learningrate.bp,
+          dropout,
+          visible_dropout,
+          hidden_dropout)
       
       #result
       # add results to list object
@@ -134,7 +141,8 @@ fast_neuralnet <-
     # generate formatted output
     nn <- generate.output(covariate, call, rep, threshold, matrix, 
                           startweights, model.list, response, err.fct.name, act.fct.name, 
-                          data, list.result, linear.output, exclude, low_size)
+                          data, list.result, linear.output, exclude, low_size,
+                          dropout, visible_dropout, hidden_dropout)
     # change class from 'nn' to 'fnn'
     class(nn) <- c('fnn')
     return(nn)

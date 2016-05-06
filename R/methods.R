@@ -62,7 +62,10 @@ setMethod("neuralnet", signature("formula", "matrixORdataframe"),
                    err.fct = "sse", act.fct = "logistic", 
                    linear.output = TRUE, exclude = NULL, 
                    constant.weights = NULL, likelihood = FALSE,
-                   low_size = TRUE){
+                   low_size = TRUE,
+                   dropout = False,
+                   visible_dropout = NULL,
+                   hidden_dropout = NULL){
             
             # check act.fct is function
             # This is essentially the filter between the
@@ -84,6 +87,10 @@ setMethod("neuralnet", signature("formula", "matrixORdataframe"),
                 if(low_size){
                     warning("Using default neuralnet package, output may be large")
                 }
+                if(dropout){
+                    stop("The default neuralnet package does not support dropout.
+                         Please use an internal activation function (see act_fcts()).")
+                }
                 out <- neuralnet::neuralnet(formula, data, hidden, threshold,        
                                             stepmax, rep, startweights, 
                                             learningrate.limit, 
@@ -103,7 +110,10 @@ setMethod("neuralnet", signature("formula", "matrixORdataframe"),
                                       err.fct, act.fct, 
                                       linear.output, exclude, 
                                       constant.weights, likelihood,
-                                      low_size)
+                                      low_size,
+                                      dropout,
+                                      visible_dropout,
+                                      hidden_dropout)
             }
             
             class(out) <- c("list")
@@ -119,9 +129,9 @@ setMethod("neuralnet", signature("formula", "matrixORdataframe"),
 setMethod("compute", signature("list", "matrixORdataframe"), 
           function(x, covariate, rep=1, model_type=NULL) {
             err_check <- check_nn_object(x)
-            if(!err_check){
-              stop(err_check)
-            }
+#             if(!err_check){
+#               stop(err_check)
+#             }
             
             if(is.null(model_type)){
                 dvs <- x$model.list[["response"]]
@@ -170,9 +180,9 @@ setMethod("compute", signature("list", "matrixORdataframe"),
 setMethod("compute", signature("list", "big.matrix"), 
           function(x, covariate, rep=1, model_type=NULL) {
             err_check <- check_nn_object(x)
-            if(!err_check){
-              stop(err_check)
-            }
+#             if(!err_check){
+#               stop(err_check)
+#             }
             
             if(is.null(model_type)){
                 #dvs <- x$model.list[["response"]]
@@ -231,9 +241,9 @@ setMethod("compute", signature("list", "big.matrix"),
 setMethod("compute", signature("fnn", "big.matrix"), 
           function(x, covariate, rep=1, model_type=NULL) {
               err_check <- check_nn_object(x)
-              if(!err_check){
-                  stop(err_check)
-              }
+#               if(!err_check){
+#                   stop(err_check)
+#               }
               
               if(is.null(model_type)){
                   warning("model_type not set, defaulting to binary")
@@ -285,9 +295,9 @@ setMethod("compute", signature("fnn", "big.matrix"),
 setMethod("compute", signature("fnn", "data.frame"), 
           function(x, covariate, rep=1, model_type=NULL) {
               err_check <- check_nn_object(x)
-              if(!err_check){
-                  stop(err_check)
-              }
+#               if(!err_check){
+#                   stop(err_check)
+#               }
               
               if(is.null(model_type)){
                   warning("model_type not set, defaulting to binary")

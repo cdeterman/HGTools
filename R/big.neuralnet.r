@@ -79,7 +79,7 @@ function (formula,
     options(scipen = 100, digits = 10)
     
     # verify inputs are appropriate
-    result <- varify.variables(data, formula, startweights, learningrate.limit, 
+    result <- verify.variables(data, formula, startweights, learningrate.limit, 
                                learningrate.factor, learningrate, lifesign, algorithm, 
                                threshold, lifesign.step, hidden, rep, stepmax, err.fct, 
                                act.fct)

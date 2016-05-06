@@ -26,6 +26,8 @@
 #' @param exclude a vector or a matrix specifying the weights, that are excluded from the calculation. If given as a vector, the exact positions of the weights must be known. A matrix with n-rows and 3 columns will exclude n weights, where the first column stands for the layer, the second column for the input neuron and the third column for the output neuron of the weight.
 #' @param constant.weights a vector specifying the values of the weights that are excluded from the training process and treated as fix.
 #' @param likelihood logical. If the error function is equal to the negative log-likelihood function, the information criteria AIC and BIC will be calculated. Furthermore the usage of confidence.interval is meaningfull.
+#' @param low_size logical. Specify if minimal neuralnet objects to be returned
+#' @param dropout logical. Specify if dropout should be used
 #' @details The globally convergent algorithm is based on the resilient backpropagation without weight backtracking and additionally modifies one learning rate, either the learningrate associated with the smallest absolute gradient (sag) or the smallest learningrate (slr) itself. The learning rates in the grprop algorithm are limited to the boundaries defined in learningrate.limit.
 #' @return \code{neuralnet} returns an object of class nn. An object of class nn is a list 
 #' containing at most the following components:

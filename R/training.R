@@ -57,17 +57,40 @@ training <- function(
                        lifesign = 'none'
                    }
                    
-                   HGmiscTools::neuralnet(formula, 
-                                          data=data, 
-                                          hidden = grid$.hidden, 
-                                          threshold=grid$.threshold, 
-                                          act.fct = "logistic", 
-                                          err.fct = "ce",
-                                          stepmax = 100000, 
-                                          lifesign=lifesign,
-                                          lifesign.step = 100,
-                                          linear.output=FALSE,
-                                          low_size = TRUE
+                   # set stepmax
+                   stepmax <- ifelse("stepmax" %in% names(model_args), model_args$stepmax, 100000)
+                   
+                   if(nchar(grid$.hidden) > 1){
+                       hidden_layers = as.numeric(unlist(strsplit(grid$.hidden, split=",")))
+                   }else{
+                       hidden_layers = grid$.hidden
+                   }
+                   
+                   # activation function
+                   actFunction <- ifelse(".act_fcts" %in% colnames(grid), grid$.act_fcts, "logistic")
+                   
+                   # dropout parameters
+                   gridDropout <- ifelse(".dropout" %in% colnames(grid), grid$.dropout, FALSE)
+                   gridVisibleDropout <- ifelse(".visible_dropout" %in% colnames(grid), grid$.visible_dropout, 0)
+                   gridHiddenDropout <- ifelse(".hidden_dropout" %in% colnames(grid), grid$.hidden_dropout, 0)
+                   gridHiddenDropout <- ifelse(gridHiddenDropout != 0, 
+                                               as.numeric(unlist(strsplit(gridHiddenDropout, split=","))),
+                                               0)
+                   
+                   HGTools::neuralnet(formula, 
+                                      data=data, 
+                                      hidden = hidden_layers, 
+                                      threshold=grid$.threshold, 
+                                      act.fct = actFunction, 
+                                      err.fct = "ce",
+                                      stepmax = stepmax, 
+                                      lifesign=lifesign,
+                                      lifesign.step = 100,
+                                      linear.output=FALSE,
+                                      low_size = TRUE,
+                                      dropout = gridDropout,
+                                      visible_dropout = gridVisibleDropout,
+                                      hidden_dropout = gridHiddenDropout
                    )
            },
            gbm =  
