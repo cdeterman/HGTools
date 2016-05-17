@@ -21,8 +21,12 @@ fast_neuralnet_bm <-
             exclude = NULL, 
             constant.weights = NULL, 
             likelihood = FALSE,
-            low_size = TRUE) 
+            low_size = TRUE,
+            dropout = FALSE,
+            visible_dropout = 0,
+            hidden_dropout = rep(0, length(hidden))) 
 {
+      # print("called fast bm nn")
     call <- match.call()
     options(scipen = 100, digits = 10)
     
@@ -31,10 +35,10 @@ fast_neuralnet_bm <-
     }
     
     # verify inputs are appropriate
-    result <- varify.variables(data, formula, startweights, learningrate.limit, 
+    result <- verify.variables(data, formula, startweights, learningrate.limit, 
                                learningrate.factor, learningrate, lifesign, algorithm, 
                                threshold, lifesign.step, hidden, rep, stepmax, err.fct, 
-                               act.fct)
+                               act.fct, dropout, visible_dropout, hidden_dropout)
     data <- result$data
     formula <- result$formula
     startweights <- result$startweights
@@ -53,28 +57,42 @@ fast_neuralnet_bm <-
     act.fct.name <- act.fct
     
     # empty objects to fill
-    matrix <- NULL
+    out_matrix <- NULL
     list.result <- NULL
     
     # create bigMatrix for covariate and response
-    covariate.BM <- big.matrix(nrow=nrow(data), 
+    covariate <- big.matrix(nrow=nrow(data), 
                                ncol=1+length(model.list[[2]]), 
                                type="double",
-                               shared = FALSE)
-    response.BM <- big.matrix(nrow=nrow(data), 
+                               shared = FALSE,
+                               init = 1)
+    response <- big.matrix(nrow=nrow(data), 
                               ncol=length(model.list[[1]]), 
                               type="double",
-                              shared = FALSE)
+                              shared = FALSE,
+                              init = 0)
+    
+    # print("data")
+    # print(head(data[]))
+    
+    covariate[,2:ncol(covariate)] <- data[,which(colnames(data) %in% model.list$variables)]
+    response[] <- data[,which(colnames(data) %in% model.list$response)]
     
     # generate initial variables
     result = c_generate_initial_variables_bm(
-      data@address, covariate.BM@address, response.BM@address,
+      response@address,
       model.list, act.fct, err.fct)
+    
+    
+    # print(head(response))
+    
+    # stop("stopping")
+    
     
     # the response and covariate BigMatrix objects were modified 
     # within c_generate_initial_variables_bm
-    covariate <- covariate.BM
-    response <- response.BM
+    #covariate <- covariate.BM
+    #response <- response.BM
     err.fct <- result$err.fct               # XPtr
     err.deriv.fct <- result$err.deriv.fct   # XPtr
     act.fct <- result$act.fct               # XPtr
@@ -87,30 +105,35 @@ fast_neuralnet_bm <-
       }
       flush.console()
       
+      # print("just before calculate")
+      
       # calculate neuralnet scores 
       result <-
         c_calculate_neuralnet_bm(
-          data@address,       # big.matrix
-          model.list, 
-          hidden, 
-          stepmax,
+          data = data@address,       
+          model_list = model.list, 
+          hidden = hidden, 
+          stepmax = stepmax,
           rep = i,
-          threshold, 
-          learningrate.limit, 
-          learningrate.factor, 
-          lifesign, 
-          covariate@address,  #big.matrix
-          response@address,   # big.matrix
-          lifesign.step, 
-          startweights,
-          algorithm, 
-          act.fct, act.deriv.fct, act.fct.name,
-          err.fct, err.deriv.fct, err.fct.name, 
-          linear.output, 
-          likelihood, 
-          exclude, 
-          constant.weights, 
-          learningrate.bp)
+          threshold = threshold, 
+          learningrate_limit = learningrate.limit, 
+          learningrate_factor = learningrate.factor, 
+          lifesign = lifesign, 
+          covariate = covariate@address,  
+          response = response@address,  
+          lifesign_step = lifesign.step, 
+          startweights = startweights,
+          algorithm = algorithm, 
+          act_fct = act.fct, act_deriv_fct = act.deriv.fct, act_fct_name = act.fct.name,
+          err_fct = err.fct, err_deriv_fct = err.deriv.fct, err_fct_name = err.fct.name, 
+          linear_output = linear.output, 
+          likelihood = likelihood, 
+          exclude = exclude, 
+          constant_weights = constant.weights, 
+          learningrate_bp = learningrate.bp,
+          dropout = dropout,
+          visible_dropout = visible_dropout,
+          hidden_dropout = hidden_dropout)
       
       #result
       # add results to list object
@@ -125,12 +148,12 @@ fast_neuralnet_bm <-
             c("error","reach_threshold","steps","aic","bic", 
               rep("", nrow(result$output.vector) - 5))
         }
-        matrix <- cbind(matrix, result$output.vector)
+        out_matrix <- cbind(out_matrix, result$output.vector)
       }
     }
     
     flush.console()
-    if (!is.null(matrix)) {
+    if (!is.null(out_matrix)) {
       weight.count <- length(unlist(list.result[[1]]$weights)) - 
         length(exclude) + length(constant.weights) - sum(constant.weights == 
                                                            0)
@@ -139,7 +162,7 @@ fast_neuralnet_bm <-
         warning("some weights were randomly generated, because 'startweights' did not contain enough values", 
                 call. = F)
       }
-      ncol.matrix <- ncol(matrix)
+      ncol.matrix <- ncol(out_matrix)
     }else{
       ncol.matrix <- 0
     }
@@ -148,9 +171,10 @@ fast_neuralnet_bm <-
                                           (rep - ncol.matrix), rep), call. = FALSE)}
     
     # generate formatted output
-    nn <- generate.output(covariate, call, rep, threshold, matrix, 
+    nn <- generate.output(covariate, call, rep, threshold, out_matrix, 
                           startweights, model.list, response, err.fct.name, act.fct.name, 
-                          data, list.result, linear.output, exclude, low_size)
+                          data, list.result, linear.output, exclude, low_size,
+                          dropout, visible_dropout, hidden_dropout)
     # change class from 'nn' to 'fnn'
     class(nn) <- c('fnn')
     return(nn)

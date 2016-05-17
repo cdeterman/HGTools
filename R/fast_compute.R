@@ -18,7 +18,8 @@ fast_compute <-
     x$weights <- relist(weights, nrow.weights, ncol.weights)
     
     if(is.big.matrix(covariate)){
-      result <- c_compute_bm(x, covariate@address)
+        result <- c_compute_bm(x, covariate@address,
+                             x$dropout, x$visible_dropout, x$hidden_dropout)
     }else{
       result <- c_compute(x, as.matrix(covariate), 
                           x$dropout, x$visible_dropout, x$hidden_dropout)

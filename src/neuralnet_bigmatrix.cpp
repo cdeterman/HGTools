@@ -28,84 +28,23 @@ typedef vector<std::string> Names;
 // @export
 //[[Rcpp::export]]
 List c_generate_initial_variables_bm(
-  SEXP data,
-  SEXP covariate_bm,
   SEXP response_bm,
   List model_list,
   String act_fct,
   String err_fct){
     
-    XPtr<BigMatrix> xpData(data);
-    arma::mat data_arma((double *)xpData->matrix(), 
-                            xpData->nrow(), 
-                            xpData->ncol(), 
-                            false);
-                          
     // make covariate & response BMs accessible
-    XPtr<BigMatrix> xpCovariateBM(covariate_bm);
     XPtr<BigMatrix> xpResponseBM(response_bm);
-    MatrixAccessor<double> A_CovariateBM(*xpCovariateBM);
-    MatrixAccessor<double> A_ResponseBM(*xpResponseBM);
-    
-    Names response = as<Names>(model_list["response"]);
-    Names variables = as<Names>(model_list["variables"]);
-    int num_ivs = response.size();
-    int num_dvs = variables.size();
-    int nrows = data_arma.n_rows;
-    
-//    Names colnames = data.names();
-    Names colnames = xpData->column_names();
-    
-    arma::mat intercept = ones<arma::mat>(data_arma.n_rows, 1);
-    arma::uvec idxr(num_ivs);
-    arma::uvec idxv(num_dvs);
-    
-    arma::mat c_covariate(nrows, num_dvs+1);
-    arma::mat c_response(nrows, num_ivs);
-    arma::mat dvs(nrows, num_dvs);
-    
-    //cout << "initialized all objects" << endl;
-    
-    // find the column indices
-    for (int i=0; i < num_ivs; i++){
-      idxr[i] = distance(colnames.begin(), find(colnames.begin(), colnames.end(), response[i]));
-    }
-    
-    for (int i=0; i < num_dvs; i++){
-      idxv[i] = distance(colnames.begin(), find(colnames.begin(), colnames.end(), variables[i]));
-    }
-    
-    // subset the columns to be used for the model
-    arma::mat sub_covariate = data_arma.cols(idxv);
-    //cout << "idxv subset complete" << endl;
-    c_covariate = join_rows(intercept, sub_covariate);
-    //cout << "covariate successfully created" << endl;
-    c_response = data_arma.cols(idxr);
-    
-    // convert covariate output to big.matrix
-    int nr = c_covariate.n_rows;
-    int nc = c_covariate.n_cols;
-    
-    for(int i =0; i < nc; i++){
-      for(int j=0; j<nr; j++){
-        A_CovariateBM[i][j] = c_covariate(j,i);
-      }
-    }
-    
-    // convert response output to big.matrix
-    nr = c_response.n_rows;
-    nc = c_response.n_cols;
-    for(int i =0; i < nc; i++){
-      for(int j=0; j<nr; j++){
-        A_ResponseBM[i][j] = c_response(j,i);
-      }
-    }
+    arma::mat response_arma((double *)xpResponseBM->matrix(), 
+                            xpResponseBM->nrow(), 
+                            xpResponseBM->ncol(), 
+                            false);
     
     // functions
     XPtr<nmfptr> xp_act_fct = act_func(act_fct);
     XPtr<nmfptr> xp_act_deriv_fct = act_deriv_func(act_fct);
-    XPtr<nmfptr2> xp_err_fct = err_func(err_fct, c_response);
-    XPtr<nmfptr2> xp_err_deriv_fct = err_deriv_func(err_fct, c_response);    
+    XPtr<nmfptr2> xp_err_fct = err_func(err_fct, response_arma);
+    XPtr<nmfptr2> xp_err_deriv_fct = err_deriv_func(err_fct, response_arma);    
     
     return List::create(Named("err.fct") = xp_err_fct, 
                         Named("err.deriv.fct") = xp_err_deriv_fct,
@@ -120,15 +59,15 @@ List c_calculate_neuralnet_bm(
   SEXP data,
   List model_list, 
   IntegerVector hidden, 
-  SEXP stepmax, 
-  SEXP rep, 
-  SEXP threshold, 
+  int stepmax, 
+  int rep, 
+  double threshold, 
   List learningrate_limit, 
   List learningrate_factor, 
   const String lifesign, 
   SEXP covariate, // BigMatrix
   SEXP response,  // BigMatrix
-  SEXP lifesign_step, 
+  int lifesign_step, 
   SEXP startweights, 
   const String algorithm, 
   SEXP act_fct, 
@@ -137,27 +76,18 @@ List c_calculate_neuralnet_bm(
   SEXP err_fct, 
   SEXP err_deriv_fct, 
   String err_fct_name,
-  SEXP linear_output, 
-  SEXP likelihood, 
+  bool linear_output, 
+  bool likelihood, 
   SEXP exclude, 
   SEXP constant_weights, 
-  double learningrate_bp,
-  SEXP dropout,
-  SEXP visible_dropout,
-  SEXP hidden_dropout) 
+  SEXP learningrate_bp,
+  bool dropout,
+  double visible_dropout,
+  arma::vec hidden_dropout) 
 {
-//    cout << "called calculate_neuralnet" << endl;
+    // cout << "called calculate_neuralnet" << endl;
     
-    // convert SEXP objects to C types
-    int c_stepmax = as<int>(stepmax);
-    int c_rep = as<int>(rep);
-    int c_lifesign_step = as<int>(lifesign_step);
-    double c_threshold = as<double>(threshold);
-    bool c_linear_output = as<bool>(linear_output);
-    bool c_likelihood = as<bool>(likelihood);
-    bool c_dropout = as<bool>(dropout);
-    double c_visible_dropout = as<double>(visible_dropout);
-    arma::vec c_hidden_dropout = as<arma::vec>(hidden_dropout);
+    double c_learningrate_bp( Rf_isNull(learningrate_bp) ? 0 : as<double>(learningrate_bp) );
     
     // Deal with BigMatrix objects
     XPtr<BigMatrix> xpResponse(response);
@@ -171,24 +101,17 @@ List c_calculate_neuralnet_bm(
                             xpCovariate->ncol(), 
                             false);
     
-    // convert response to arma::mat
-    // first convert to NumericMatrix
-//    NumericMatrix nm_response = DFtoNM(response);
-//    // now convert to arma::mat
-//    int n = nm_response.nrow(), k = nm_response.ncol();
-//    // create armadillo matrix, reuse memory
-//    arma::mat response_arma(nm_response.begin(), n, k, false);
+    // covariate_arma.head_rows(5).print("bm neuralnet covariate_arma");
+    // response_arma.head_rows(5).print("bm neuralnet response_arma");
     
     // Declare other variables
     double aic;
     double bic;
     
-//    cout << "everything initialized" << endl;
+   // cout << "everything initialized" << endl;
     
     if(!(Rf_isNull(startweights))){
         stop("custom startweights not yet implemented");
-//        cout << "custom startweights not yet implemented" << endl;
-//        return 0;
     }
     
     // get starting time may just move to front function
@@ -203,7 +126,7 @@ List c_calculate_neuralnet_bm(
     
     // generate initial start weights
     List result = c_generate_startweights(model_list, hidden, startweights, 
-                                          c_rep, exclude, constant_weights);
+                                          rep, exclude, constant_weights);
 //    cout << "passed generate_startweights" << endl;
                                           
     List weights = result["weights"];
@@ -224,24 +147,24 @@ List c_calculate_neuralnet_bm(
       ncol_weights[i] = tmp_ncol;
     }
 
-//    cout << "just before c_prop" << endl;
+   // cout << "just before c_prop" << endl;
 
     result = c_rprop(weights,  
                     response_arma, // big.matrix
                     covariate_arma, // big.matrix
-                    c_threshold,
+                    threshold,
                     learningrate_limit, 
                     learningrate_factor, 
-                    c_stepmax, 
-                    lifesign, c_lifesign_step, 
+                    stepmax, 
+                    lifesign, lifesign_step, 
                     act_fct, act_deriv_fct, act_fct_name, 
                     err_fct, err_deriv_fct, err_fct_name,
-                    algorithm, c_linear_output, 
-                    exclude, learningrate_bp,
-                    c_dropout,
-                    c_visible_dropout, c_hidden_dropout);
+                    algorithm, linear_output, 
+                    exclude, c_learningrate_bp,
+                    dropout,
+                    visible_dropout, hidden_dropout);
                     
-//    cout << "finished r_prop" << endl;
+   // cout << "finished r_prop" << endl;
                     
     List dx_startweights = weights;
     weights = result["weights"];
@@ -255,13 +178,14 @@ List c_calculate_neuralnet_bm(
 //    cout << error << endl;
     
     if (std::isnan(error) & err_fct_name == "ce") {
-        stop("error is na, method to remove na values in progress");
-//        cout << "error is na, method to remove na values in progress" << endl;
-//        return 0;
-//      if (all(net_result <= 1, net_result >= 0)) {
-//        // need method to remove na values (e.g. na.rm=T)
-//        error = sum(sum(c_err_fct(net_result, response)))       
-//      }
+        //stop("error is na, method to remove na values in progress");
+        
+        arma::mat tmp_errs = c_err_fct(net_result, response_arma);
+        // change non-finite elements to zero
+        tmp_errs.elem( find_nonfinite(tmp_errs) ).zeros();
+        
+        // re-sum error values
+        error = sum(sum(tmp_errs));
     }
         
 //    if (!is.null(constant_weights) && any(constant_weights != 0)) {
@@ -271,7 +195,7 @@ List c_calculate_neuralnet_bm(
 //    if (length(exclude) == 0) {exclude <- NULL}
 //    aic <- NULL
 //    bic <- NULL
-    if (c_likelihood) {
+    if (likelihood) {
         
         arma::vec weights_vec = c_unlist(weights);
         
@@ -291,9 +215,9 @@ List c_calculate_neuralnet_bm(
     
     // If user wants verbose output that processes are running
     if (lifesign != "none") {
-        if (reached_threshold <= c_threshold) {
+        if (reached_threshold <= threshold) {
             // print spaces
-            string spaces = string(max(snprintf(nullptr, 0, "%d", c_stepmax), 7) - 
+            string spaces = string(max(snprintf(nullptr, 0, "%d", stepmax), 7) - 
                 snprintf(nullptr, 0, "%d", step),
                 ' ');
             cout << string(55 - snprintf(nullptr, 0, "%d", step), ' ') << step;
@@ -320,7 +244,7 @@ List c_calculate_neuralnet_bm(
         }
     }
  
-    if ( reached_threshold > c_threshold ) {
+    if ( reached_threshold > threshold ) {
       return List::create(Named("output.vector") = R_NilValue,
                           Named("weights") = R_NilValue);
     }
@@ -333,7 +257,7 @@ List c_calculate_neuralnet_bm(
     //NumericVector output_vector;
     arma::vec output_vector(5);
     
-    if(!c_likelihood) {
+    if(!likelihood) {
 //      output_vector = NumericVector::create(
 //        _["error"] = error, 
 //        _["reached_threshold"] = reached_threshold, 

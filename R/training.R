@@ -10,23 +10,16 @@ training <- function(
     verbose
     )
 {
-    print("called training")
-    print(method)
+    # print("called training")
     
-    print("checking formula")
     ## Factor the class labels
     dvs <- as.character(formula[[2]])
-    print("formula dv")
-    print(dvs)
-    #         print(colnames(data))
     dvs_idx <- which(colnames(data) %in% dvs)
     
-    print("got var indicies")
+    # print("got var indicies")
     
 #     data[,dvs_idx] <- factor(as.character(data[,dvs_idx]))
     xNames <- attr(terms(formula), "term.labels")
-#     print("xNames:")
-#     print(xNames)
     
     if(!method %in% c("neuralnet", "rf")){        
         print("ivs names acquired")
@@ -42,11 +35,11 @@ training <- function(
         stop("internal dv not binary")
     }
     
-#     print(table(data[,1]))
-#     print(str(data[,1]))
-#     stop("not training right now")
+    # print(table(data[,1]))
+    # print(str(data[,1]))
+    # stop("not training right now")
     
-    print("accessing switch")
+    # print("accessing switch")
     
     mod <- switch(method,
            neuralnet = 
@@ -72,10 +65,13 @@ training <- function(
                    # dropout parameters
                    gridDropout <- ifelse(".dropout" %in% colnames(grid), grid$.dropout, FALSE)
                    gridVisibleDropout <- ifelse(".visible_dropout" %in% colnames(grid), grid$.visible_dropout, 0)
-                   gridHiddenDropout <- ifelse(".hidden_dropout" %in% colnames(grid), grid$.hidden_dropout, 0)
-                   gridHiddenDropout <- ifelse(gridHiddenDropout != 0, 
+                   gridHiddenDropout <- ifelse(".hidden_dropout" %in% colnames(grid), as.character(grid$.hidden_dropout), "0")
+                   gridHiddenDropout <- ifelse(gridHiddenDropout != "0", 
                                                as.numeric(unlist(strsplit(gridHiddenDropout, split=","))),
                                                0)
+                   
+                   # print(table(data[,dvs]))
+                   # print(class(data))
                    
                    HGTools::neuralnet(formula, 
                                       data=data, 
@@ -209,7 +205,9 @@ training <- function(
             },
     )
     
-    return(list(modelFit = mod, ivs = xNames))
+    # print(head(mod$weights[[1]][[1]]))
+    
+    return(list(modelFit = mod, ivs = xNames, dvs = dvs))
 }
 
 

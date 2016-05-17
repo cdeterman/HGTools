@@ -1,3 +1,5 @@
+#' @importClassesFrom bigmemory big.matrix
+
 
 #' @title Training of neural networks
 #' @description This is a replication of the \code{neuralnet} package to be compatible with 

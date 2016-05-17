@@ -13,7 +13,8 @@ compute.net <-
                 
                 # Other major bottleneck point
                 if(class(neurons[[i]]) == 'big.matrix'){
-                    temp <- neurons[[i]][,] %*% weights[[i]]  
+                    # temp <- neurons[[i]][,] %*% weights[[i]]  
+                    temp <- neurons[[i]] %*% weights[[i]]  
                 }else{
                     temp <- neurons[[i]] %*% weights[[i]]
                 }
@@ -21,20 +22,23 @@ compute.net <-
                 
                 # convert to normal matrix/numeric type because smaller
                 # need to find a way of applying sign changes and 'exp' function
-                act.temp <- act.fct(temp[,])
-                #act.temp <- act.fct(temp)
+                # act.temp <- act.fct(temp[,])
+                act.temp <- act.fct(temp)
                 if (special) {
                     #print("special")
                     #neuron.deriv[[i]] <- as.matrix(act.deriv.fct(act.temp))
                     neuron.deriv[[i]] <- act.deriv.fct(act.temp)
                 }else{
                     #print("not special")
-                    neuron.deriv[[i]] <- act.deriv.fct(temp[,])
-                    #neuron.deriv[[i]] <- act.deriv.fct(temp)
+                    # neuron.deriv[[i]] <- act.deriv.fct(temp[,])
+                    neuron.deriv[[i]] <- act.deriv.fct(temp)
                 }
                 
-                # convert back to big.matrix
-                neurons[[i + 1]] <- cbind(1, act.temp)
+                # big.matrix requires manual cbind
+                neurons[[i + 1]] <- big.matrix(nrow = nrow(act.temp), 
+                                               ncol = ncol(act.temp),
+                                               init = 1)
+                neurons[[i + 1]][,2:(ncol(act.temp) + 1)] <- act.temp[]
                 #neurons[[i+1]] <- cbindBM(act.temp, 1, binding="left")
             }
         }

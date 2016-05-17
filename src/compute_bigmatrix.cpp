@@ -25,21 +25,22 @@ using namespace std;
 //[[Rcpp::export]]
 List c_compute_bm(
   List nn, 
-  SEXP covariate_in) 
+  SEXP covariate_in,
+  bool dropout,
+  double visible_dropout,
+  arma::vec hidden_dropout) 
   {
 //    cout << "called c_compute" << endl;
-//    // convert to arma::mat
-//    int n = covariate_in.nrow(), k = covariate_in.ncol();
-//    // create armadillo matrix, reuse memory
-//    arma::mat covariate_arma(covariate_in.begin(), n, k, false);
     
     XPtr<BigMatrix> xpCovariate(covariate_in);
     arma::mat covariate_arma((double *)xpCovariate->matrix(), 
                             xpCovariate->nrow(), 
                             xpCovariate->ncol(), 
                             false);
+    
+    // covariate_arma.head_rows(5).print("covariate_arma");
 
-//    int c_rep = as<int>(rep);
+    // int c_rep = as<int>(rep);
     bool linear_output = as<bool>(nn["linear.output"]);
     List weights = nn["weights"];
 
@@ -68,6 +69,12 @@ List c_compute_bm(
     }
 
 //    cout << "passed all initializations" << endl;
+
+    if(dropout){
+        if(visible_dropout > 0){
+            covariate_arma = covariate_arma * visible_dropout;
+        }
+    }
     
     arma::mat tmp_ones = ones<arma::mat>(covariate_arma.n_rows, 1);
     arma::mat covariate = join_rows(tmp_ones, covariate_arma);
@@ -82,6 +89,13 @@ List c_compute_bm(
         arma::mat temp = as<arma::mat>(neurons[i]) * 
                         as<arma::mat>(weights[i]);
         arma::mat act_temp = c_act_fct(temp);
+        
+        if(dropout){
+            if(hidden_dropout[i] > 0){
+                act_temp = act_temp * hidden_dropout[i];
+            }
+        }
+        
         arma::mat tmp_ones = ones<arma::mat>(act_temp.n_rows, 1);
         neurons[i+1] = join_rows(tmp_ones, act_temp);
       }

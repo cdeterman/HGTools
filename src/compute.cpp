@@ -39,13 +39,15 @@ List c_compute(
     int n = covariate_in.nrow(), k = covariate_in.ncol();
     // create armadillo matrix, reuse memory
     arma::mat covariate_arma(covariate_in.begin(), n, k, false);
+    
+    // covariate_arma.head_rows(5).print("covariate_arma");
 
-//    int c_rep = as<int>(rep);
+   // int c_rep = as<int>(rep);
     bool linear_output = as<bool>(nn["linear.output"]);
     List weights = nn["weights"];
-//    List weights = full_weights[c_rep];
+   // List weights = full_weights[c_rep];
     
-//    cout << "basic initializations" << endl;
+   // cout << "basic initializations" << endl;
     
     // Cannot inherit XPtr because not able to save
     // so it must be a string

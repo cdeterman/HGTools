@@ -18,28 +18,42 @@ predicting <- function(modelFit, method, newdata, model_type = NULL, model_args 
 {
 #     if(any(colnames(newdata) == ".classes")) newdata$.classes <- NULL
     
-#     print("trying to predict")
-#     print(method)
-#     print(model_type)
-#     print(model_args)
-#     print(dim(newdata))
-    
-#     stop("stopping")
+    # print("trying to predict")
+    # print(method)
+    # print(model_type)
+    # print(model_args)
+    # print(dim(newdata))
+    # print("compute data")
+    # print(head(newdata))
+    # print("modelFit weights")
+    # print(modelFit$weights[[1]][[2]])
     
     predictedValue <- 
         switch(method,   
                
         neuralnet = 
         {
-#             print("about to 'compute'")
-            result <- HGTools::compute(modelFit, covariate = newdata, model_type=model_type)
+            # print("about to 'compute'")
+            # print(class(newdata))
+            # print(class(modelFit))
             
-#             print('compute passed')
+            if(is.big.matrix(newdata)){
+                covariate <- deepcopy(newdata)
+            }else{
+                covariate <- newdata
+            }
+            
+            # print(class(covariate))
+            # print(class(modelFit))
+            
+            result <- HGTools::compute(modelFit, covariate = covariate, model_type=model_type)
+            
+            # print('compute passed')
             # possibly use scale01 for results???
             if(model_type == "binary"){
                 if(scale){
                     out <- scale01(result@net.result)
-#                     out <- ifelse(c(round(scale01(result@net.result))), 1, 0)
+                    # out <- ifelse(c(round(scale01(result@net.result))), 1, 0)
                     print("scaled results")
                 }else{
                     out <- result@net.result
@@ -48,6 +62,7 @@ predicting <- function(modelFit, method, newdata, model_type = NULL, model_args 
             }else{
                 stop("Only binary currently implemented")
             }
+            # print('compute finished')
             out
         },
         
@@ -152,6 +167,9 @@ predicting <- function(modelFit, method, newdata, model_type = NULL, model_args 
         stop("unrecognized model")
 
         )
+    
+    # print(head(predictedValue))
+    
     return(predictedValue)
 }
 

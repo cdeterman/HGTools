@@ -11,43 +11,48 @@ setMethod("neuralnet", signature("formula", "big.matrix"),
                    err.fct = "sse", act.fct = "logistic", 
                    linear.output = TRUE, exclude = NULL, 
                    constant.weights = NULL, likelihood = FALSE,
-                   low_size = TRUE){
-            
-            # check act.fct is function
-            # This is essentially the filter between the
-            # fast (Rcpp) and default (R) implementation
-            # The fast function requires a string on a 
-            # defined function
-            if(!is.function(act.fct)){
-              if(is.character(act.fct)){
-                if(!act.fct %in% act_fcts()[,1]){
-                  stop("Unrecognized activation function (act.fct).
-                       Check options with act_fct().")
-                }
-                }else{
-                  stop("Unrecognized activation function (act.fct)")
+                   low_size = TRUE, dropout = FALSE,
+                   visible_dropout = 0, 
+                   hidden_dropout = rep(0, length(hidden))){
+              
+              # check act.fct is function
+              # This is essentially the filter between the
+              # fast (Rcpp) and default (R) implementation
+              # The fast function requires a string on a 
+              # defined function
+              if(!is.function(act.fct)){
+                  if(is.character(act.fct)){
+                      if(!act.fct %in% act_fcts()[,1]){
+                          stop("Unrecognized activation function (act.fct).
+                               Check options with act_fct().")
+                      }
+                      }else{
+                          stop("Unrecognized activation function (act.fct)")
+                  }
               }
-            }
-            
-            if(is.function(act.fct)){
-              big.neuralnet(formula, data, hidden, threshold,        
-                            stepmax, rep, startweights, 
-                            learningrate.limit, learningrate.factor, 
-                            learningrate, lifesign, lifesign.step, 
-                            algorithm, err.fct, act.fct, 
-                            linear.output, exclude, 
-                            constant.weights, likelihood, low_size)
-            }else{
-              fast_neuralnet_bm(formula, data, hidden, threshold,        
+              
+              if(is.function(act.fct)){
+                  big.neuralnet(formula, data, hidden, threshold,        
                                 stepmax, rep, startweights, 
                                 learningrate.limit, learningrate.factor, 
                                 learningrate, lifesign, lifesign.step, 
                                 algorithm, err.fct, act.fct, 
                                 linear.output, exclude, 
-                                constant.weights, likelihood, low_size)
-            }
-            
-            })
+                                constant.weights, likelihood, low_size,
+                                dropout, visible_dropout, hidden_dropout)
+              }else{
+                  fast_neuralnet_bm(formula, data, hidden, threshold,        
+                                    stepmax, rep, startweights, 
+                                    learningrate.limit, learningrate.factor, 
+                                    learningrate, lifesign, lifesign.step, 
+                                    algorithm, err.fct, act.fct, 
+                                    linear.output, exclude, 
+                                    constant.weights, likelihood, low_size,
+                                    dropout, visible_dropout, hidden_dropout)
+              }
+              
+          }
+)
 
 
 # ' @rdname neuralnet-methods
@@ -63,9 +68,9 @@ setMethod("neuralnet", signature("formula", "matrixORdataframe"),
                    linear.output = TRUE, exclude = NULL, 
                    constant.weights = NULL, likelihood = FALSE,
                    low_size = TRUE,
-                   dropout = False,
-                   visible_dropout = NULL,
-                   hidden_dropout = NULL){
+                   dropout = FALSE,
+                   visible_dropout = 0,
+                   hidden_dropout = rep(0, length(hidden))){
             
             # check act.fct is function
             # This is essentially the filter between the
@@ -164,9 +169,9 @@ setMethod("compute", signature("list", "matrixORdataframe"),
             }
             
             if(is.function(x[["act.fct"]])){
-              tmp <- neuralnet::compute(x, covariate, rep)
+                tmp <- neuralnet::compute(x, covariate, rep)
             }else{
-              tmp <- fast_compute(x, covariate, rep)
+                tmp <- fast_compute(x, covariate, rep)
             }
             
             out <- new(paste0("nn_", model_type), neurons=tmp$neurons, 
@@ -274,6 +279,8 @@ setMethod("compute", signature("fnn", "big.matrix"),
               if(is.function(x[["act.fct"]])){
                   result <- big.compute(x, covariate, rep, model_type)
               }else{
+                  # print("covariate before fast_compute")
+                  # print(head(covariate[]))
                   result <- fast_compute(x, covariate, rep)
               }
               
@@ -292,7 +299,7 @@ setMethod("compute", signature("fnn", "big.matrix"),
 )
 
 # ' @export
-setMethod("compute", signature("fnn", "data.frame"), 
+setMethod("compute", signature("fnn", "matrixORdataframe"), 
           function(x, covariate, rep=1, model_type=NULL) {
               err_check <- check_nn_object(x)
 #               if(!err_check){

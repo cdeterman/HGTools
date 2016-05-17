@@ -26,6 +26,7 @@ fast_neuralnet <-
             visible_dropout = 0,
             hidden_dropout = rep(0, length(hidden))) 
 {
+      print("called fast_neuralnet")
     call <- match.call()
     options(scipen = 100, digits = 10)
     
@@ -62,10 +63,10 @@ fast_neuralnet <-
     
     covariate <- result$covariate
     response <- result$response
-    err.fct <- result$err.fct               # XPtr
-    err.deriv.fct <- result$err.deriv.fct   # XPtr
-    act.fct <- result$act.fct               # XPtr
-    act.deriv.fct <- result$act.deriv.fct   # XPtr
+    err.fct <- result$err.fct               
+    err.deriv.fct <- result$err.deriv.fct   
+    act.fct <- result$act.fct               
+    act.deriv.fct <- result$act.deriv.fct   
     
     for (i in 1:rep) {
       if (lifesign != "none") {
@@ -75,10 +76,10 @@ fast_neuralnet <-
       
       # calculate neuralnet scores 
       #set.seed(123)
-#       print("calling calculate")
+      # print("calling calculate")
       result <-
         c_calculate_neuralnet(
-          data, # big.matrix
+          data, 
           model.list, 
           hidden, 
           stepmax,
@@ -87,8 +88,8 @@ fast_neuralnet <-
           learningrate.limit, 
           learningrate.factor, 
           lifesign, 
-          covariate, #big.matrix
-          response,# big.matrix
+          covariate,
+          response,
           lifesign.step, 
           startweights,
           algorithm, 
@@ -145,5 +146,7 @@ fast_neuralnet <-
                           dropout, visible_dropout, hidden_dropout)
     # change class from 'nn' to 'fnn'
     class(nn) <- c('fnn')
+    
+    print("passed neuralnet")
     return(nn)
   }

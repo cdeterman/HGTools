@@ -3,7 +3,7 @@
 
 predictionStats <- function(obs, pred){
     
-    print("calling predictionStats")
+    # print("calling predictionStats")
     
     # F1-score = 2 * (PPV * Sensitivity)/(PPV + Sensitivity)
     # AUC, Sensitivity, Specificity, PPV, NPV, F1-Score

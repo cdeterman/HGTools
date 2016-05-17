@@ -1,8 +1,6 @@
 check_nn_object <- function(object) {
   errors <- character()
   
-  print(names(object))
-  
   # check components present
   elements <- c("weights", "act.fct", "linear.output")
   if(!all(elements %in% names(object))){

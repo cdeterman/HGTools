@@ -2,7 +2,7 @@
 
 #' @export
 train <-
-    function(X, Y, 
+    function(formula, 
              data,
              testData,
              method,
@@ -12,11 +12,14 @@ train <-
              save_models = FALSE,
              allowParallel = FALSE){
         
-        assert_all_are_non_missing_nor_empty_character(X)
-        assert_all_are_non_missing_nor_empty_character(Y)
+        assert_is_formula(formula)
         assert_is_logical(allowParallel)
         assert_all_are_positive(k)
         assert_is_data.frame(grid)
+        
+        if(method != "neuralnet" && (is.big.matrix(data) || is.big.matrix(testData))){
+            stop("only neuralnet method supports big.matrix classes")
+        }
         
         if(method == "neuralnet"){
             
@@ -55,39 +58,37 @@ train <-
             } 
         }
         
-        
-        
         if(is.null(cvControl)) cvControl = cvControl()
         nr <- nrow(data)
+        
+        # get ivs & dvs
+        X <- attr(terms(formula), "term.labels")
+        formula.reverse <- formula
+        formula.reverse[[3]] <- formula[[2]]
+        Y <- attr(terms(formula.reverse), "term.labels")
         
         # may only need for neuralnet, perhaps hide under some validation function
         if(is.null(cvControl$model_type)){
             #if(length(attr(terms(formula.reverse), "term.labels")) == 1){
-            if(length(dvs) == 1){
+            if(length(Y) == 1){
                 cvControl$model_type = "binary"
             }else{
                 stop("You must specify model_type!")
             }
         }
         
+        # if not neuralnet the DV should be factor
         if(method != "neuralnet" & !is.factor(data[,Y])){
+            # this is okay because can't get this far with big.matrix objects
             data[,Y] <- factor(data[,Y])
         }
         
-        levs <- levels(data[,Y])
-        
-        formula <- as.formula(paste(paste(Y,collapse="+"), paste(X, collapse= "+"), sep="~"))
-#         print(formula)
-        
         # get observed values/classes
-        formula.reverse <- formula
-        formula.reverse[[3]] <- formula[[2]]
+        # doesn't really matter if big.matrix because likely only one column
+        obs <- testData[,Y]
         
-#         print(attr(terms(formula.reverse), "term.labels"))
-        obs <- testData[,attr(terms(formula.reverse), "term.labels")]
-        
+        # again, big.matrix not important as just getting indices
         inTrain <- createFolds(data[,1], k = k, list = TRUE, returnTrain = TRUE)
-        #print(str(inTrain))        
 
         outTrain <- lapply(inTrain,
                            function(inTrain, total) total[-unique(inTrain)],
@@ -144,6 +145,7 @@ train <-
 #         finalGrid <- lapply(finalGrid, as.character)
         
         # fit the 'best' model on full dataset
+        set.seed(as.numeric(Sys.Date()))
         mod <- tryCatch({
             training(formula,
                      data = data, 
@@ -160,10 +162,23 @@ train <-
         
 
         # subset test data with only needed columns
-        testDataIVs <- testData[, mod$ivs]
+        if(is.big.matrix(testData)){
+            # reorder columns if not in order
+            col_order <- match(c(mod$ivs, mod$dvs), colnames(testData))
+            #orig_col_order <- as.numeric(match(colnames(testData), c(mod$ivs, mod$dvs)))
+            # cols <- !colnames(testData) %in% mod$dvs
+            end_col_idx <- length(mod$ivs)
+            # colOrder <- as.numeric(c(col_order, dv_idx))
+            if(length(unique(diff(col_order))) != 1){
+                mpermuteCols(testData, order = colOrder)
+            }
 
-        #print("model type?")
-        #print(cvControl$model_type)
+            testDataIVs <- sub.big.matrix(testData, firstCol = 1, lastCol = end_col_idx)
+            # testDataIVs <- deepcopy(testData, cols = cols)
+            # testDataIVs <- testData[][, mod$ivs]
+        }else{
+            testDataIVs <- testData[, mod$ivs]
+        }
         
         result <- tryCatch({
             predicting(mod$modelFit, method = method, 
@@ -174,32 +189,16 @@ train <-
             stop("Final Internal 'predict' function failed!")
         })
         
+        # restore original column order
+        if(is.big.matrix(testData)){
+            # restore original column order if it was reordered
+            if(length(unique(diff(col_order))) != 1){
+                mpermuteCols(testData, order = as.numeric(order(col_order)))
+            }
+        }
+        
         # some means of evaluating the model
-        
-        # possibly use scale01 for results???
-
-        #print(class(result))
-        
-#         if(method == "neuralnet"){
-#             pred <- switch(class(result),
-#                            nn_binary = ifelse(c(round(result@net.result)), 1, 0),
-#                            stop("Only binary currently implemented")
-#             )
-#         }
-        
-#         if(method == "neuralnet"){
-#             finalPerf <- predictionStats(obs, pred)
-#         }else{
-#             finalPerf <- predictionStats(obs, result)
-#         }
-
-        finalPerf <- predictionStats(obs, result)
-        
-#         print(names(mod))
-
-#         if(save_models){
-#             save(mod$modelFit, file = paste(method, "winning_model.RData", sep = "_"))
-#         }
+        finalPerf <- predictionStats(obs, as.matrix(result))
         
         out <- list(
             finalModel = mod$modelFit,
@@ -209,8 +208,6 @@ train <-
         )
         
         return(out)
-
-#         return(perfMatrix)
     }
 
 
@@ -233,13 +230,14 @@ internal_cv <-
         `%do%`
     }
     
-    print("check verbose")
-    print(verbose)
+    # print("check verbose")
+    # print(verbose)
     
     # get observed values/classes
     formula.reverse <- formula
     formula.reverse[[3]] <- formula[[2]]
     
+    # This doesn't need to be big.matrix as likely just 1 column
     obs <- data[,attr(terms(formula.reverse), "term.labels")]
     
     levs <- levels(as.factor(obs))
@@ -247,28 +245,55 @@ internal_cv <-
     # F1-score = 2 * (PPV * Sensitivity)/(PPV + Sensitivity)
     # AUC, Sensitivity, Specificity, PPV, NPV, F1-Score
     
-    #     print("about to start foreach loop")
-    #     print(seq(along = inTrain))
-    #     print(seq(nrow(grid)))
-    
-#     print(head(data))
-#     print(head(outTrain[[1]]))
-#     stop()
-    
     finalMetrics <- 
         foreach(iter = seq(along = inTrain)) %:%
         foreach(param = seq(nrow(grid)), .combine='rbind') %op%
     {    
-        print(iter)
-        print(grid[param,])
-        print(iter * param)
-        print(method)
-#         if(iter  > 1 | param > 1){
-#             stop("stopping for now")            
-#         }
+        # print(iter)
+        # print(grid[param,])
+        # print(iter * param)
+        # print(method)
+        # if(iter  > 1 | param > 1){
+        #     stop("stopping for now")
+        # }
         
+        # start <- data[]
+        if(is.big.matrix(data)){
+            thread_data <- deepcopy(data)
+        }
+        
+        
+        # print(head(data))
+        
+        if(is.big.matrix(data)){
+            all_idx <- seq(nrow(thread_data))
+            sub_idx <- inTrain[[iter]]
+            non_idx <- all_idx[!all_idx %in% sub_idx]
+            end_idx <- length(sub_idx)
+            rowOrder <- as.numeric(c(sub_idx, non_idx))
+            if(length(unique(diff(rowOrder))) != 1){
+                mpermute(thread_data, order = rowOrder)
+            }
+            subdata <- sub.big.matrix(thread_data, firstRow = 1, lastRow = end_idx)
+            # subdata <- deepcopy(data, rows = inTrain[[iter]])
+            # subdata <- data[][inTrain[[iter]],, drop = FALSE]
+        }else{
+            subdata <- data[inTrain[[iter]],, drop = FALSE]  
+        }
+        
+        # print("training subdata")
+        # print(head(subdata))
+        
+        # subdata2 <- data[][inTrain[[iter]],, drop = FALSE]
+        # 
+        # if(!all.equal(subdata, subdata2)){
+        #     stop("subdata fucked up")
+        # }
+        
+        # print('training begun')
+        set.seed(as.numeric(Sys.Date()))
         mod <- tryCatch({
-            training(formula, data[inTrain[[iter]],, drop = FALSE], 
+            training(formula, subdata, 
                      grid[param,, drop = FALSE], method, 
                      model_args, 
                      verbose = verbose)
@@ -277,7 +302,36 @@ internal_cv <-
             print(err)
             stop("Internal model fit failed!")
         })
-            
+        
+        # set.seed(42)
+        # mod2 <- tryCatch({
+        #     training(formula, subdata2,
+        #              grid[param,, drop = FALSE], method,
+        #              model_args,
+        #              verbose = verbose)
+        # },
+        # error = function(err){
+        #     print(err)
+        #     stop("Internal model fit failed!")
+        # })
+        # 
+        # if(!all.equal(mod$modelFit$weights[[1]][[2]], mod2$modelFit$weights[[1]][[2]])){
+        #     stop("weights are fucked up")
+        # }
+        
+        # print('passed initial training')
+        
+        if(is.big.matrix(data)){
+            # restore original order
+            if(length(unique(diff(rowOrder))) != 1){
+                mpermute(thread_data, order = as.numeric(order(rowOrder)))
+            }
+
+            # assert_are_identical(thread_data[], start, allow_attributes = FALSE)
+            # print("restored data")
+            # print(head(thread_data))
+        }
+        
 
         if(save_models){
             save(mod, file = paste(method, paste(gsub("\\.", "", colnames(grid)),
@@ -286,21 +340,95 @@ internal_cv <-
                                    "cv_model.rda", sep = "_"))
         }
         
+        # print('passed save section')
+        
         # subset test data with only needed columns
-        testData <- data[outTrain[[iter]], mod$ivs]
+        if(is.big.matrix(data)){
+            all_idx <- seq(nrow(thread_data))
+            sub_idx <- outTrain[[iter]]
+            non_idx <- all_idx[!all_idx %in% sub_idx]
+            end_idx <- length(sub_idx)
+            rowOrder <- as.numeric(c(sub_idx, non_idx))
+            if(length(unique(diff(rowOrder))) != 1){
+                mpermute(thread_data, order = rowOrder)
+            }
+            
+            col_order <- match(c(mod$ivs, mod$dvs), colnames(thread_data))
+            end_col_idx <- length(mod$ivs)
+            # colOrder <- as.numeric(c(col_order, dv_idx))
+            if(length(unique(diff(col_order))) != 1){
+                mpermuteCols(thread_data, order = colOrder)
+            }
+            
+            subdata <- sub.big.matrix(thread_data, 
+                                      firstRow = 1, lastRow = length(sub_idx),
+                                      firstCol = 1, lastCol = end_col_idx)
+            
+            # cols <- which(!colnames(data) %in% mod$dvs)
+            # subdata <- deepcopy(data, rows = outTrain[[iter]], cols = cols)
+            # subdata <- data[][outTrain[[iter]], mod$ivs, drop = FALSE]
+        }else{
+            subdata <- data[outTrain[[iter]], mod$ivs, drop = FALSE]  
+        }
+        
+        # test_bm(subdata@address, subdata2)
+        
+        # subdata2 <- data[][outTrain[[iter]], mod$ivs, drop = FALSE]  
+        # 
+        # if(!all.equal(subdata[], subdata2)){
+        #     stop("subdata fucked up")
+        # }
+        # stop("stop for test")
+        
+        # print('outTrain subdata')
+        # print(head(subdata))
+        #testData <- data[outTrain[[iter]], mod$ivs]
         
 #             print(dim(testData))
 #             print(colnames(testData))
         
+        # print('about to predict')
         result <- tryCatch({
-            predicting(mod$modelFit, method, newdata = testData, model_type = model_type, model_args, param, scale)
-            #HGmiscTools::compute(mod, testData, model_type=model_type),            
-            #silent = TRUE
+            predicting(mod$modelFit, method, newdata = subdata, 
+                       model_type = model_type, model_args, param, scale)
         },
         error = function(err){
             print(err)
             stop("Internal model prediction failed!")
         })
+        
+        # result2 <- tryCatch({
+        #     predicting(mod2$modelFit, method, newdata = subdata2, 
+        #                model_type = model_type, model_args, param, scale)
+        # },
+        # error = function(err){
+        #     print(err)
+        #     stop("Internal model prediction failed!")
+        # })
+        # 
+        # if(!all.equal(result, result2)){
+        #     stop("subdata fucked up")
+        # }
+
+        # print('passed predicting')
+        
+        # restore original column and row order
+        if(is.big.matrix(data)){
+            # restore original row order
+            if(length(unique(diff(rowOrder))) != 1){
+                # print('restoring rows')
+                mpermute(thread_data, order = as.numeric(order(rowOrder)))
+            }
+            # restore original column order
+            if(length(unique(diff(col_order))) != 1){
+                # print('restoring cols')
+                mpermuteCols(thread_data, order = as.numeric(order(col_order)))
+            }
+            #assert_are_identical(thread_data[], start, allow_attributes = FALSE)
+        }
+        
+        # print("restored data 2")
+        # print(head(data))
         
         # some means of evaluating the model
         

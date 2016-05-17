@@ -143,10 +143,10 @@ List c_calculate_neuralnet(
         c_hidden_dropout = as<arma::vec>(hidden_dropout);
     }
         
-//    cout << "initialized numbers" << endl;
-    
-//    const String c_lifesign(lifesign);
-//    const String c_algorithm(algorithm);
+   // cout << "initialized numbers" << endl;
+
+   // const String c_lifesign(lifesign);
+   // const String c_algorithm(algorithm);
     
     //String act_fct_name = act_fct;  // need the name of the method for later
     //String err_fct_name = err_fct;  // need the name of the method for later
@@ -168,6 +168,9 @@ List c_calculate_neuralnet(
     n = nm_covariate.nrow(), k = nm_covariate.ncol();
     // create armadillo matrix, reuse memory
     arma::mat covariate_arma(nm_covariate.begin(), n, k, false);
+    
+    // covariate_arma.head_rows(5).print("normal neuralnet covariate_arma");
+    // response_arma.head_rows(5).print("normal neuralnet response_arma");
     
     // Declare other variables
     double aic;
