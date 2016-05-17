@@ -32,8 +32,9 @@ concordance=TRUE
 #  ivs <- cnames[3:ncol(training)]
 #  dvs <- cnames(training)[1]
 #  
-#  fit_nn <- train(X = ivs,
-#                  Y = dvs,
+#  f <- as.formula(paste(dvs, " ~ ", paste(ivs, collapse= "+")))
+#  
+#  fit_nn <- train(formula = f,
 #                  data = training,
 #                  testData = testing,
 #                  method = "neuralnet",
@@ -51,13 +52,7 @@ concordance=TRUE
 #  stopCluster(cl)
 
 ## ----trainParallel, eval=FALSE-------------------------------------------
-#  # To save space I am indexing the names
-#  cnames <- colnames(training)
-#  ivs <- cnames[3:ncol(training)]
-#  dvs <- cnames(training)[1]
-#  
-#  fit_nn <- train(X = ivs,
-#                  Y = dvs,
+#  fit_nn <- train(formula = f,
 #                  data = training,
 #                  testData = testing,
 #                  method = "neuralnet",
