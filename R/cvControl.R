@@ -11,6 +11,7 @@
 #' @param scale A boolean option whether to scale model results
 #' cross-validation step which can be subsequently loaded with \code{load} 
 #' @return A list of the additional internal parameters
+#' @import assertive
 #' @export
 cvControl <- function(model_args, model_type, 
                       filter = FALSE, filter_category = NULL, 

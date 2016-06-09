@@ -1,0 +1,279 @@
+% \VignetteIndexEntry{ Training models }
+% \VignettePackage{HGTools}
+%\VignetteEngine{knitr::knitr}
+
+% To compile this document
+% library('knitr'); rm(list=ls()); knit('Training.Rnw')
+
+\documentclass[12pt]{article}\usepackage[]{graphicx}\usepackage[]{color}
+%% maxwidth is the original width if it is less than linewidth
+%% otherwise use linewidth (to make sure the graphics do not exceed the margin)
+\makeatletter
+\def\maxwidth{ %
+  \ifdim\Gin@nat@width>\linewidth
+    \linewidth
+  \else
+    \Gin@nat@width
+  \fi
+}
+\makeatother
+
+\definecolor{fgcolor}{rgb}{0.345, 0.345, 0.345}
+\newcommand{\hlnum}[1]{\textcolor[rgb]{0.686,0.059,0.569}{#1}}%
+\newcommand{\hlstr}[1]{\textcolor[rgb]{0.192,0.494,0.8}{#1}}%
+\newcommand{\hlcom}[1]{\textcolor[rgb]{0.678,0.584,0.686}{\textit{#1}}}%
+\newcommand{\hlopt}[1]{\textcolor[rgb]{0,0,0}{#1}}%
+\newcommand{\hlstd}[1]{\textcolor[rgb]{0.345,0.345,0.345}{#1}}%
+\newcommand{\hlkwa}[1]{\textcolor[rgb]{0.161,0.373,0.58}{\textbf{#1}}}%
+\newcommand{\hlkwb}[1]{\textcolor[rgb]{0.69,0.353,0.396}{#1}}%
+\newcommand{\hlkwc}[1]{\textcolor[rgb]{0.333,0.667,0.333}{#1}}%
+\newcommand{\hlkwd}[1]{\textcolor[rgb]{0.737,0.353,0.396}{\textbf{#1}}}%
+
+\usepackage{framed}
+\makeatletter
+\newenvironment{kframe}{%
+ \def\at@end@of@kframe{}%
+ \ifinner\ifhmode%
+  \def\at@end@of@kframe{\end{minipage}}%
+  \begin{minipage}{\columnwidth}%
+ \fi\fi%
+ \def\FrameCommand##1{\hskip\@totalleftmargin \hskip-\fboxsep
+ \colorbox{shadecolor}{##1}\hskip-\fboxsep
+     % There is no \\@totalrightmargin, so:
+     \hskip-\linewidth \hskip-\@totalleftmargin \hskip\columnwidth}%
+ \MakeFramed {\advance\hsize-\width
+   \@totalleftmargin\z@ \linewidth\hsize
+   \@setminipage}}%
+ {\par\unskip\endMakeFramed%
+ \at@end@of@kframe}
+\makeatother
+
+\definecolor{shadecolor}{rgb}{.97, .97, .97}
+\definecolor{messagecolor}{rgb}{0, 0, 0}
+\definecolor{warningcolor}{rgb}{1, 0, 1}
+\definecolor{errorcolor}{rgb}{1, 0, 0}
+\newenvironment{knitrout}{}{} % an empty environment to be redefined in TeX
+
+\usepackage{alltt}
+\usepackage[sc]{mathpazo}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\geometry{verbose,tmargin=2.5cm,bmargin=2.5cm,lmargin=2.5cm,rmargin=2.5cm}
+\setcounter{secnumdepth}{2}
+\setcounter{tocdepth}{2}
+\usepackage{url}
+\usepackage[unicode=true,pdfusetitle,
+ bookmarks=true,bookmarksnumbered=true,bookmarksopen=true,bookmarksopenlevel=2,
+ breaklinks=false,pdfborder={0 0 1},backref=false,colorlinks=false]
+ {hyperref}
+\hypersetup{
+ pdfstartview={XYZ null null 1}}
+
+\newcommand{\pkg}[1]{{\fontseries{b}\selectfont #1}}
+\renewcommand{\pkg}[1]{{\textsf{#1}}}
+
+\newcommand{\Rpackage}[1]{\textsl{#1}}
+\newcommand\CRANpkg[1]{%
+  {\href{http://cran.fhcrc.org/web/packages/#1/index.html}%
+    {\Rpackage{#1}}}}
+\newcommand\Githubpkg[1]{\GithubSplit#1\relax}
+\def\GithubSplit#1/#2\relax{{\href{https://github.com/#1/#2}%
+    {\Rpackage{#2}}}}
+
+\newcommand{\Rcode}[1]{\texttt{#1}}
+\newcommand{\Rfunction}[1]{\Rcode{#1}}
+\newcommand{\Robject}[1]{\Rcode{#1}}
+\newcommand{\Rclass}[1]{\textit{#1}}
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\begin{document}
+
+
+
+\title{Training Predictive Models}
+\author{Dr. Charles Determan Jr. PhD\footnote{cdeterman@healthgrades.com}}
+\newpage
+
+\maketitle
+\section{Introduction}
+This vignette is designed to simply get a user 'up and running' with model
+development.  The statistical justifications are not included here but are intended to
+be included in a subsequent vignette.  If the user is curious, feel free to search
+the extensive machine learning literature on the value of cross-validation.
+
+\maketitle
+\section{Installation}
+This package is not an official R package and exists solely in the authors github repository.
+There are some additional dependencies that must also be installed.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlcom{# install devtools and bigmemory backends}
+\hlkwd{install.packages}\hlstd{(}\hlkwd{c}\hlstd{(}\hlstr{"devtools"}\hlstd{,}\hlstr{"bigmemory"}\hlstd{,} \hlstr{"bigalgebra"}\hlstd{,} \hlstr{"biganalytics"}\hlstd{))}
+
+\hlcom{# the other dependencies should be installed automatically}
+\hlstd{devtools}\hlopt{::}\hlkwd{install_github}\hlstd{(}\hlstr{"cdeterman/HGTools"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\newpage
+\maketitle
+\section{Grid Searching}
+If you are completely unfamiliar with the model you wish to tune this package provides the 
+function \Rfunction{denovo.grid}.  For most methods, this function only requires you to
+specify the method and 'resolution' for the grid.  You can see all available models with the
+\Rfunction{modelInfo} function.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{denovo.grid}\hlstd{(}\hlkwc{method} \hlstd{=} \hlstr{"neuralnet"}\hlstd{,} \hlkwc{res} \hlstd{=} \hlnum{3}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+However, some methods require the dataset for estimating appropriate parameters.  This
+includes random forest (denoted 'rf').
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlcom{# Note the dvs denotes the dependent variables to omit from the estimation}
+\hlcom{# This can be omitted but you will receive a warning}
+\hlkwd{denovo.grid}\hlstd{(}\hlstr{"neuralnet"}\hlstd{,} \hlkwc{res}\hlstd{=}\hlnum{5}\hlstd{,} \hlkwc{data}\hlstd{=trainingData,} \hlkwc{dvs}\hlstd{=}\hlkwd{c}\hlstd{(}\hlstr{"my_dv"}\hlstd{))}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+If you know what you are doing, you can also create the grid manually using the \Rfunction{expand.grid}
+function.  Please note that the hyperparameters you specify must match the desired model and
+be prefixed with a 'period'
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{expand.grid}\hlstd{(}\hlkwc{.hidden} \hlstd{=} \hlkwd{seq}\hlstd{(}\hlnum{2}\hlstd{,}\hlnum{5}\hlstd{),} \hlkwc{.threshold} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{5}\hlstd{,} \hlnum{1}\hlstd{))}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+You can see the available parameters for each model by running \Rfunction{modelInfo}.
+
+\maketitle
+\section{Demo Data}
+Now you are essentially ready to begin training your model.  You only need to have some data to work
+with.  The following is an example using the adhd dataset included in this package for testing 
+purposes.  You can load the training and testing datasets with the following commands:
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{data}\hlstd{(}\hlstr{"adhd_train"}\hlstd{)}
+\hlkwd{data}\hlstd{(}\hlstr{"adhd_test"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\newpage
+\maketitle
+\section{Model Training}
+The function call below will fit a neuralnet model.  The primary arguments include:
+
+\begin{itemize}
+\item X - character vector of independent variable names
+\item Y - character vector of dependent variable names
+\item data - the dataset to be trained from
+\item testData - the dataset used to evaluate the final model
+\item k - the number of fold used in cross-validation (default: 10)
+\item metric - performance metric to evaluate models (default: AUC)
+\end{itemize}
+             
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlcom{# To save space I am indexing the names}
+\hlstd{cnames} \hlkwb{<-} \hlkwd{colnames}\hlstd{(training)}
+\hlstd{ivs} \hlkwb{<-} \hlstd{cnames[}\hlnum{3}\hlopt{:}\hlkwd{ncol}\hlstd{(training)]}
+\hlstd{dvs} \hlkwb{<-} \hlkwd{cnames}\hlstd{(training)[}\hlnum{1}\hlstd{]}
+
+\hlstd{fit_nn} \hlkwb{<-} \hlkwd{train}\hlstd{(}\hlkwc{X} \hlstd{= ivs,}
+                \hlkwc{Y} \hlstd{= dvs,}
+                \hlkwc{data} \hlstd{= training,}
+                \hlkwc{testData} \hlstd{= testing,}
+                \hlkwc{method} \hlstd{=} \hlstr{"neuralnet"}\hlstd{,}
+                \hlkwc{grid} \hlstd{= grid,}
+                \hlkwc{k} \hlstd{=} \hlnum{5}\hlstd{,}
+                \hlkwc{metric} \hlstd{=} \hlstr{"AUC"}
+\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\maketitle
+\section{Results}
+Once the \Rfunction{train} call has completed, you will be returned a list with contains the following elements:
+
+\begin{enumerate}
+\item finalModel - the final model generated from the 'best' hyperparameters, this is your production model from those evaluated
+\item performance - the performance statistics for the final model against the test dataset
+\item cvPerformanceMatrix - a list containing the means and variances of each hyperparameter iteration
+\item bestParams - a data.frame containing the 'best' hyperparameters
+\end{enumerate}
+
+\maketitle
+\section{Parallelization}
+This task can clearly take advantage of parallelization.  To do so, you must set up the parallel backend in R.
+To do so depends upon your operating system.  The cross-platform backed to use the package \Rpackage{doParallel}.
+You simply need to pass the number of cores you wish to parallize over with \Rfunction{registerDoParallel}.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlcom{# register 8 cores}
+\hlstd{cl} \hlkwb{<-} \hlkwd{makeCluster}\hlstd{(}\hlnum{8}\hlstd{)}
+\hlkwd{registerDoParallel}\hlstd{(}\hlnum{8}\hlstd{)}
+
+\hlcom{# make sure to stop cluster when completed}
+\hlkwd{stopCluster}\hlstd{(cl)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+The linux specific version is \Rpackage{doMC} with the similar function \Rfunction{registerDoMC}.  You can
+essentially use whatever backed you wish so long as it is compatible with your system.
+
+Once the backend is setup you can call the \Rfunction{train} the same as before but change the 'allowParallel' argument
+to TRUE.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlcom{# To save space I am indexing the names}
+\hlstd{cnames} \hlkwb{<-} \hlkwd{colnames}\hlstd{(training)}
+\hlstd{ivs} \hlkwb{<-} \hlstd{cnames[}\hlnum{3}\hlopt{:}\hlkwd{ncol}\hlstd{(training)]}
+\hlstd{dvs} \hlkwb{<-} \hlkwd{cnames}\hlstd{(training)[}\hlnum{1}\hlstd{]}
+
+\hlstd{fit_nn} \hlkwb{<-} \hlkwd{train}\hlstd{(}\hlkwc{X} \hlstd{= ivs,}
+                \hlkwc{Y} \hlstd{= dvs,}
+                \hlkwc{data} \hlstd{= training,}
+                \hlkwc{testData} \hlstd{= testing,}
+                \hlkwc{method} \hlstd{=} \hlstr{"neuralnet"}\hlstd{,}
+                \hlkwc{grid} \hlstd{= grid,}
+                \hlkwc{k} \hlstd{=} \hlnum{5}\hlstd{,}
+                \hlkwc{metric} \hlstd{=} \hlstr{"AUC"}\hlstd{,}
+                \hlkwc{allowParallel} \hlstd{=} \hlnum{TRUE}
+\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\maketitle
+\section{Saving All Models}
+It may be the user's wish to save every model that is created during cross-validation.  
+This option is also provided with the \Rfunction{train} function with the argument \Rcode{save\_models}.  
+Simply set the \Rcode{save\_models} to TRUE and all models generated with be saved with the format 
+'model\_hyperparam\_hyperparam\_iter\_cv\_model.rda' with varying numbers of hyperparameters for the 
+specific model.
+
+\end{document}

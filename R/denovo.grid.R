@@ -1,5 +1,4 @@
 
-
 #' @title Denovo Grid Generation
 #' @description Greates grid for optimizing selected models
 #' @param method vector indicating the models to generate grids.
@@ -16,6 +15,8 @@
 #' @seealso \code{"expand.grid"} for generating grids of specific 
 #' parameters desired.  However, NOTE that you must still use the same
 #' arguments names prefixed with a '.'.
+#' @import assertive
+#' @import hgneuralnet
 #' @export
 denovo.grid <- 
     function(method,
@@ -98,6 +99,8 @@ rfTune <- function(
 }
 
 
+#' @importFrom hgneuralnet act_fcts
+
 #' @title Denovo Grid Generation
 #' @description Greates expanded grid for neuralnets
 #' @param res Resolution of the search grid
@@ -107,6 +110,7 @@ rfTune <- function(
 #' @seealso \code{\link{denovo.grid}} or \code{\link{"expand.grid"}} for generating grids 
 #' of specific parameters desired.  However, NOTE that you must still use the same
 #' arguments names prefixed with a '.'.
+#' @import assertive
 #' @export
 denovo_neuralnet_grid <- 
     function(res, act_fcts, dropout){

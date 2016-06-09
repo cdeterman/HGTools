@@ -70,23 +70,20 @@ training <- function(
                                                as.numeric(unlist(strsplit(gridHiddenDropout, split=","))),
                                                0)
                    
-                   # print(table(data[,dvs]))
-                   # print(class(data))
-                   
-                   HGTools::neuralnet(formula, 
-                                      data=data, 
-                                      hidden = hidden_layers, 
-                                      threshold=grid$.threshold, 
-                                      act.fct = actFunction, 
-                                      err.fct = "ce",
-                                      stepmax = stepmax, 
-                                      lifesign=lifesign,
-                                      lifesign.step = 100,
-                                      linear.output=FALSE,
-                                      low_size = TRUE,
-                                      dropout = gridDropout,
-                                      visible_dropout = gridVisibleDropout,
-                                      hidden_dropout = gridHiddenDropout
+                   neuralnet(formula, 
+                             data=data, 
+                             hidden = hidden_layers, 
+                             threshold=grid$.threshold, 
+                             act.fct = actFunction, 
+                             err.fct = "ce",
+                             stepmax = stepmax, 
+                             lifesign=lifesign,
+                             lifesign.step = 100,
+                             linear.output=FALSE,
+                             low_size = TRUE,
+                             dropout = gridDropout,
+                             visible_dropout = gridVisibleDropout,
+                             hidden_dropout = gridHiddenDropout
                    )
            },
            gbm =  

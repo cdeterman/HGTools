@@ -34,29 +34,18 @@ predicting <- function(modelFit, method, newdata, model_type = NULL, model_args 
         neuralnet = 
         {
             # print("about to 'compute'")
-            # print(class(newdata))
-            # print(class(modelFit))
-            
-            if(is.big.matrix(newdata)){
-                covariate <- deepcopy(newdata)
-            }else{
-                covariate <- newdata
-            }
-            
-            # print(class(covariate))
-            # print(class(modelFit))
-            
-            result <- HGTools::compute(modelFit, covariate = covariate, model_type=model_type)
+            # result <- HGTools::compute(modelFit, covariate = newdata, model_type=model_type)
+            result <- predict(modelFit, covariate = newdata, type = "prob")
             
             # print('compute passed')
             # possibly use scale01 for results???
             if(model_type == "binary"){
                 if(scale){
-                    out <- scale01(result@net.result)
+                    out <- scale01(result)
                     # out <- ifelse(c(round(scale01(result@net.result))), 1, 0)
                     print("scaled results")
                 }else{
-                    out <- result@net.result
+                    out <- result
                 }
                 #         pred <- ifelse(c(round(result@net.result)), 1, 0)
             }else{
