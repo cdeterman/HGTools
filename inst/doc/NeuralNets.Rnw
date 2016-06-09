@@ -66,6 +66,7 @@ parameters such as activation functions and dropout.  You can see available func
 \Rfunction{act\_fcts}.
 
 <<gridSearch>>=
+library(HGTools)
 grid <- denovo_neuralnet_grid(res = 3, 
                               act_fcts = c("logistic", "relu"), 
                               dropout=TRUE)

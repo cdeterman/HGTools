@@ -5,6 +5,7 @@ concordance=TRUE
 )
 
 ## ----gridSearch----------------------------------------------------------
+library(HGTools)
 grid <- denovo_neuralnet_grid(res = 3, 
                               act_fcts = c("logistic", "relu"), 
                               dropout=TRUE)
