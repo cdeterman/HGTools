@@ -35,7 +35,7 @@ predicting <- function(modelFit, method, newdata, model_type = NULL, model_args 
         {
             # print("about to 'compute'")
             # result <- HGTools::compute(modelFit, covariate = newdata, model_type=model_type)
-            result <- predict(modelFit, covariate = newdata, type = "prob")
+            result <- predict(modelFit, newdata = newdata, type = "prob")
             
             # print('compute passed')
             # possibly use scale01 for results???

@@ -211,6 +211,8 @@ train <-
     }
 
 
+#' @import foreach
+#' @import bigmemory
 internal_cv <- 
     function(formula, data,
              k,

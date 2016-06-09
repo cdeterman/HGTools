@@ -1,6 +1,7 @@
 
 # Functions for generating model performance metrics
 
+#' @import caTools
 predictionStats <- function(obs, pred){
     
     # print("calling predictionStats")
