@@ -15,8 +15,7 @@ Imports:
     e1071,
     gbm,
     glmnet,
-    randomForest,
-    caTools
+    randomForest
 Suggests:
     testthat,
     knitr

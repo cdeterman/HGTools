@@ -1,62 +1,84 @@
 
 # Functions for generating model performance metrics
 
-#' @import caTools
+#' @import pROC
 predictionStats <- function(obs, pred){
-    
+
     # print("calling predictionStats")
-    
+
     # F1-score = 2 * (PPV * Sensitivity)/(PPV + Sensitivity)
     # AUC, Sensitivity, Specificity, PPV, NPV, F1-Score
-    
-    tmp.auc <- colMeans(colAUC(pred, obs, 
-                               plotROC = FALSE, alg = "ROC"))
-    
-#     print("calculated AUC")
-    
-#     tmp.auc <- colMeans(colAUC(order(pred), obs, 
+
+    if(ncol(pred) > 1){
+        tmp.auc <- multiAUC(obs, pred)
+    }else{
+        tmp.auc <- auc(obs, as.numeric(pred))[1]    
+    }
+    # tmp.auc <- colMeans(colAUC(pred, obs,
+    #                            plotROC = FALSE, alg = "ROC"))
+
+    # print("calculated AUC")
+
+#     tmp.auc <- colMeans(colAUC(order(pred), obs,
 #                                plotROC = FALSE, alg = "ROC"))
 #     confMat <- confusionMatrix(obs, pred)
 
-#     print("observations")
-#     print(table(obs))
+    # print("observations")
+    # print(table(obs))
 #     print(length(obs))
-#     print("rounded pred")
-#     print(table(factor(round(pred), levels = c(0, 1))))
+    # print("predictions")
+    # print(table(factor(colnames(pred)[max.col(pred)], levels = colnames(pred))))
 #     print(length(pred))
 
-    confMat <- confusionMatrix(obs, factor(round(pred), levels = c(0, 1)))
+    if(ncol(pred) > 1){
+        confMat <- confusionMatrix(obs, factor(colnames(pred)[max.col(pred)], levels = colnames(pred)))   
+    }else{
+        confMat <- confusionMatrix(obs, factor(round(pred), levels = c(0, 1)))    
+    }
 
-#     print("called confusionMatrix")
+    # print("called confusionMatrix")
     
-    sensitivity <- confMat$byClass["Sensitivity"]
-    specificity <- confMat$byClass["Specificity"]
-    ppv <- confMat$byClass["Pos Pred Value"]
-    npv <- confMat$byClass["Neg Pred Value"]
-    fsc <- 2 * (ppv * sensitivity)/(ppv + sensitivity)
+    # print(confMat)
+
+    if(ncol(pred) > 1){
+        # print("Pos Pred Value column")
+        # print(confMat$byClass[,"Pos Pred Value"])
+        sensitivity <- mean(confMat$byClass[,"Sensitivity"], na.rm = TRUE)
+        specificity <- mean(confMat$byClass[,"Specificity"], na.rm = TRUE)
+        ppv <- mean(confMat$byClass[,"Pos Pred Value"], na.rm = TRUE)
+        npv <- mean(confMat$byClass[,"Neg Pred Value"], na.rm = TRUE)
+        fsc <- 2 * (ppv * sensitivity)/(ppv + sensitivity)
+    }else{
+        sensitivity <- confMat$byClass["Sensitivity"]
+        specificity <- confMat$byClass["Specificity"]
+        ppv <- confMat$byClass["Pos Pred Value"]
+        npv <- confMat$byClass["Neg Pred Value"]
+        fsc <- 2 * (ppv * sensitivity)/(ppv + sensitivity)
+    }
     
+
     out <- c(tmp.auc, sensitivity, specificity, ppv, npv, fsc)
     names(out) <- c("AUC", "Sensitivity", "Specificity", "PPV", "NPV", "F1-Score")
     return(out)
 }
 
-confusionMatrix <- function (data, ...) 
+confusionMatrix <- function (data, ...)
 {
     UseMethod("confusionMatrix")
 }
 
 confusionMatrix.default <- function(
-    data, reference, positive = NULL, 
-    dnn = c("Prediction", 
-            "Reference"), prevalence = NULL, ...) 
+    data, reference, positive = NULL,
+    dnn = c("Prediction",
+            "Reference"), prevalence = NULL, ...)
 {
-    if (!is.factor(data)) 
+    if (!is.factor(data))
         data <- factor(data)
-    if (!is.factor(reference)) 
+    if (!is.factor(reference))
         reference <- factor(reference)
-    if (!is.character(positive) & !is.null(positive)) 
+    if (!is.character(positive) & !is.null(positive))
         stop("positive argument must be character")
-    if (length(levels(data)) > length(levels(reference))) 
+    if (length(levels(data)) > length(levels(reference)))
         stop("the data cannot have more levels than the reference")
     if (!any(levels(data) %in% levels(reference))) {
         stop("The data must contain some levels that overlap the reference.")
@@ -78,120 +100,120 @@ confusionMatrix.default <- function(
     }
     classLevels <- levels(data)
     numLevels <- length(classLevels)
-    if (numLevels < 2) 
+    if (numLevels < 2)
         stop("there must be at least 2 factors levels in the data")
-    if (numLevels == 2 & is.null(positive)) 
+    if (numLevels == 2 & is.null(positive))
         positive <- levels(reference)[1]
     classTable <- table(data, reference, dnn = dnn, ...)
     confusionMatrix.table(classTable, positive, prevalence = prevalence)
 }
 
-confusionMatrix.table <- function (data, positive = NULL, prevalence = NULL, ...) 
+confusionMatrix.table <- function (data, positive = NULL, prevalence = NULL, ...)
 {
     requireNamespace("e1071", quietly = TRUE)
-    if (length(dim(data)) != 2) 
+    if (length(dim(data)) != 2)
         stop("the table must have two dimensions")
-    if (!all.equal(nrow(data), ncol(data))) 
+    if (!all.equal(nrow(data), ncol(data)))
         stop("the table must nrow = ncol")
-    if (!all.equal(rownames(data), colnames(data))) 
+    if (!all.equal(rownames(data), colnames(data)))
         stop("the table must the same classes in the same order")
-    if (!is.character(positive) & !is.null(positive)) 
+    if (!is.character(positive) & !is.null(positive))
         stop("positive argument must be character")
     classLevels <- rownames(data)
     numLevels <- length(classLevels)
-    if (numLevels < 2) 
+    if (numLevels < 2)
         stop("there must be at least 2 factors levels in the data")
-    if (numLevels == 2 & is.null(positive)) 
+    if (numLevels == 2 & is.null(positive))
         positive <- rownames(data)[1]
-    if (numLevels == 2 & !is.null(prevalence) && length(prevalence) != 
-            1) 
+    if (numLevels == 2 & !is.null(prevalence) && length(prevalence) !=
+            1)
         stop("with two levels, one prevalence probability must be specified")
-    if (numLevels > 2 & !is.null(prevalence) && length(prevalence) != 
-            numLevels) 
+    if (numLevels > 2 & !is.null(prevalence) && length(prevalence) !=
+            numLevels)
         stop("the number of prevalence probability must be the same as the number of levels")
-    if (numLevels > 2 & !is.null(prevalence) && is.null(names(prevalence))) 
+    if (numLevels > 2 & !is.null(prevalence) && is.null(names(prevalence)))
         stop("with >2 classes, the prevalence vector must have names")
     propCI <- function(x) {
         binom.test(sum(diag(x)), sum(x))$conf.int
     }
     propTest <- function(x) {
-        out <- binom.test(sum(diag(x)), sum(x), p = max(apply(x, 
+        out <- binom.test(sum(diag(x)), sum(x), p = max(apply(x,
                                                               2, sum)/sum(x)), alternative = "greater")
         unlist(out[c("null.value", "p.value")])
     }
-    overall <- c(unlist(e1071::classAgreement(data))[c("diag", 
+    overall <- c(unlist(e1071::classAgreement(data))[c("diag",
                                                        "kappa")], propCI(data), propTest(data), mcnemar.test(data)$p.value)
-    names(overall) <- c("Accuracy", "Kappa", "AccuracyLower", 
+    names(overall) <- c("Accuracy", "Kappa", "AccuracyLower",
                         "AccuracyUpper", "AccuracyNull", "AccuracyPValue", "McnemarPValue")
     if (numLevels == 2) {
-        if (is.null(prevalence)) 
+        if (is.null(prevalence))
             prevalence <- sum(data[, positive])/sum(data)
         negative <- classLevels[!(classLevels %in% positive)]
-        tableStats <- c(sensitivity.table(data, positive), 
-                        specificity.table(data, negative), 
-                        posPredValue.table(data, positive, prevalence = prevalence), 
-                        negPredValue.table(data, negative, prevalence = prevalence), 
-                        prevalence, sum(data[positive, positive])/sum(data), 
+        tableStats <- c(sensitivity.table(data, positive),
+                        specificity.table(data, negative),
+                        posPredValue.table(data, positive, prevalence = prevalence),
+                        negPredValue.table(data, negative, prevalence = prevalence),
+                        prevalence, sum(data[positive, positive])/sum(data),
                         sum(data[positive, ])/sum(data))
-        names(tableStats) <- c("Sensitivity", "Specificity", 
-                               "Pos Pred Value", "Neg Pred Value", "Prevalence", 
+        names(tableStats) <- c("Sensitivity", "Specificity",
+                               "Pos Pred Value", "Neg Pred Value", "Prevalence",
                                "Detection Rate", "Detection Prevalence")
-        tableStats["Balanced Accuracy"] <- (tableStats["Sensitivity"] + 
+        tableStats["Balanced Accuracy"] <- (tableStats["Sensitivity"] +
                                                 tableStats["Specificity"])/2
     }
     else {
-        tableStats <- matrix(NA, nrow = length(classLevels), 
+        tableStats <- matrix(NA, nrow = length(classLevels),
                              ncol = 8)
         for (i in seq(along = classLevels)) {
             pos <- classLevels[i]
             neg <- classLevels[!(classLevels %in% classLevels[i])]
-            prev <- if (is.null(prevalence)) 
+            prev <- if (is.null(prevalence))
                 sum(data[, pos])/sum(data)
             else prevalence[pos]
-            tableStats[i, ] <- c(sensitivity.table(data, pos), 
-                                 specificity.table(data, neg), 
-                                 posPredValue.table(data, pos, prevalence = prev), 
-                                 negPredValue.table(data, 
-                                                    neg, prevalence = prev), prev, sum(data[pos, 
-                                                                                            pos])/sum(data), sum(data[pos, ])/sum(data), 
+            tableStats[i, ] <- c(sensitivity.table(data, pos),
+                                 specificity.table(data, neg),
+                                 posPredValue.table(data, pos, prevalence = prev),
+                                 negPredValue.table(data,
+                                                    neg, prevalence = prev), prev, sum(data[pos,
+                                                                                            pos])/sum(data), sum(data[pos, ])/sum(data),
                                  NA)
-            tableStats[i, 8] <- (tableStats[i, 1] + tableStats[i, 
+            tableStats[i, 8] <- (tableStats[i, 1] + tableStats[i,
                                                                2])/2
         }
         rownames(tableStats) <- paste("Class:", classLevels)
-        colnames(tableStats) <- c("Sensitivity", "Specificity", 
-                                  "Pos Pred Value", "Neg Pred Value", "Prevalence", 
+        colnames(tableStats) <- c("Sensitivity", "Specificity",
+                                  "Pos Pred Value", "Neg Pred Value", "Prevalence",
                                   "Detection Rate", "Detection Prevalence", "Balanced Accuracy")
     }
-    list(positive = positive, table = data, overall = overall, 
+    list(positive = positive, table = data, overall = overall,
          byClass = tableStats, dots = list(...))
 }
 
-sensitivity <- function (data, ...) 
+sensitivity <- function (data, ...)
 {
     UseMethod("sensitivity")
 }
 
-specificity <- function (data, ...) 
+specificity <- function (data, ...)
 {
     UseMethod("specificity")
 }
 
-posPredValue <- function (data, ...) 
+posPredValue <- function (data, ...)
 {
     UseMethod("posPredValue")
 }
 
-negPredValue <- function (data, ...) 
+negPredValue <- function (data, ...)
 {
     UseMethod("negPredValue")
 }
 
-sensitivity.table <- function (data, positive = rownames(data)[1], ...) 
+sensitivity.table <- function (data, positive = rownames(data)[1], ...)
 {
-    if (!all.equal(nrow(data), ncol(data))) 
+    if (!all.equal(nrow(data), ncol(data)))
         stop("the table must have nrow = ncol")
-    if (!all.equal(rownames(data), colnames(data))) 
+    if (!all.equal(rownames(data), colnames(data)))
         stop("the table must the same groups in the same order")
     if (nrow(data) > 2) {
         tmp <- data
@@ -213,11 +235,11 @@ sensitivity.table <- function (data, positive = rownames(data)[1], ...)
     sens
 }
 
-specificity.table <- function (data, negative = rownames(data)[-1], ...) 
+specificity.table <- function (data, negative = rownames(data)[-1], ...)
 {
-    if (!all.equal(nrow(data), ncol(data))) 
+    if (!all.equal(nrow(data), ncol(data)))
         stop("the table must have nrow = ncol")
-    if (!all.equal(rownames(data), colnames(data))) 
+    if (!all.equal(rownames(data), colnames(data)))
         stop("the table must the same groups in the same order")
     if (nrow(data) > 2) {
         tmp <- data
@@ -239,12 +261,12 @@ specificity.table <- function (data, negative = rownames(data)[-1], ...)
     spec
 }
 
-posPredValue.table <- function (data, positive = rownames(data)[1], prevalence = NULL, 
-                                ...) 
+posPredValue.table <- function (data, positive = rownames(data)[1], prevalence = NULL,
+                                ...)
 {
-    if (!all.equal(nrow(data), ncol(data))) 
+    if (!all.equal(nrow(data), ncol(data)))
         stop("the table must have nrow = ncol")
-    if (!all.equal(rownames(data), colnames(data))) 
+    if (!all.equal(rownames(data), colnames(data)))
         stop("the table must the same groups in the same order")
     if (nrow(data) > 2) {
         tmp <- data
@@ -261,20 +283,20 @@ posPredValue.table <- function (data, positive = rownames(data)[1], prevalence =
         rm(tmp)
     }
     negative <- colnames(data)[colnames(data) != positive]
-    if (is.null(prevalence)) 
+    if (is.null(prevalence))
         prevalence <- sum(data[, positive])/sum(data)
     sens <- sensitivity(data, positive)
     spec <- specificity(data, negative)
-    (sens * prevalence)/((sens * prevalence) + ((1 - spec) * 
+    (sens * prevalence)/((sens * prevalence) + ((1 - spec) *
                                                     (1 - prevalence)))
 }
 
-negPredValue.table <- function (data, negative = rownames(data)[-1], prevalence = NULL, 
-                                ...) 
+negPredValue.table <- function (data, negative = rownames(data)[-1], prevalence = NULL,
+                                ...)
 {
-    if (!all.equal(nrow(data), ncol(data))) 
+    if (!all.equal(nrow(data), ncol(data)))
         stop("the table must have nrow = ncol")
-    if (!all.equal(rownames(data), colnames(data))) 
+    if (!all.equal(rownames(data), colnames(data)))
         stop("the table must the same groups in the same order")
     if (nrow(data) > 2) {
         tmp <- data
@@ -291,23 +313,23 @@ negPredValue.table <- function (data, negative = rownames(data)[-1], prevalence 
         rm(tmp)
     }
     positive <- colnames(data)[colnames(data) != negative]
-    if (is.null(prevalence)) 
+    if (is.null(prevalence))
         prevalence <- sum(data[, positive])/sum(data)
     sens <- sensitivity(data, positive)
     spec <- specificity(data, negative)
-    (spec * (1 - prevalence))/(((1 - sens) * prevalence) + ((spec) * 
+    (spec * (1 - prevalence))/(((1 - sens) * prevalence) + ((spec) *
                                                                 (1 - prevalence)))
 }
 
 
 
-sensitivity.default <- function (data, reference, positive = levels(reference)[1], na.rm = TRUE, 
-                                 ...) 
+sensitivity.default <- function (data, reference, positive = levels(reference)[1], na.rm = TRUE,
+                                 ...)
 {
-    if (!is.factor(reference) | !is.factor(data)) 
+    if (!is.factor(reference) | !is.factor(data))
         stop("inputs must be factors")
-    if (length(unique(c(levels(reference), levels(data)))) != 
-            2) 
+    if (length(unique(c(levels(reference), levels(data)))) !=
+            2)
         stop("input data must have the same two levels")
     if (na.rm) {
         cc <- complete.cases(data) & complete.cases(reference)
@@ -322,13 +344,13 @@ sensitivity.default <- function (data, reference, positive = levels(reference)[1
     sens
 }
 
-specificity.default <- function (data, reference, negative = levels(reference)[-1], 
-                                 na.rm = TRUE, ...) 
+specificity.default <- function (data, reference, negative = levels(reference)[-1],
+                                 na.rm = TRUE, ...)
 {
-    if (!is.factor(reference) | !is.factor(data)) 
+    if (!is.factor(reference) | !is.factor(data))
         stop("input data must be a factor")
-    if (length(unique(c(levels(reference), levels(data)))) != 
-            2) 
+    if (length(unique(c(levels(reference), levels(data)))) !=
+            2)
         stop("input data must have the same two levels")
     if (na.rm) {
         cc <- complete.cases(data) & complete.cases(reference)
@@ -351,11 +373,11 @@ specificity.default <- function (data, reference, negative = levels(reference)[-
 #' @export
 metrics <- function(){
     out <- data.frame(
-        codes = c("AUC", "Sens", "Spec", 
+        codes = c("AUC", "Sens", "Spec",
                   "PPV", "NPV", "F1-Score"),
         description = c("Area Under ROC Curve", "Sensitivity", "Specificity",
-                        "Positive Predictive Value", 
-                        "Negative Predictive Value", 
+                        "Positive Predictive Value",
+                        "Negative Predictive Value",
                         "Harmonic mean of Precision and Recall")
     )
 }

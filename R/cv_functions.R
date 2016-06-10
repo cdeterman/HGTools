@@ -73,7 +73,8 @@ train <-
             if(length(Y) == 1){
                 cvControl$model_type = "binary"
             }else{
-                stop("You must specify model_type!")
+                cvControl$model_type = "multi"
+                # stop("You must specify model_type!")
             }
         }
         
@@ -107,7 +108,7 @@ train <-
             allowParallel,
             scale = cvControl$scale) 
         
-        #print("internal cv complete")
+        # print("internal cv complete")
 
         for(g in seq(ncol(grid))){
             perfMatrix$means[,g] <- as(perfMatrix$means[,g], class(grid[,g]))

@@ -11,7 +11,7 @@
 #' @import randomForest
 #' @import e1071
 #' @import gbm
-#' @import glmnet
+#' @importFrom glmnet predict.glmnet
 # ' @export
 
 predicting <- function(modelFit, method, newdata, model_type = NULL, model_args = NULL, param = NULL, scale = FALSE)
