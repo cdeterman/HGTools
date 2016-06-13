@@ -293,6 +293,11 @@ internal_cv <-
         #     stop("subdata fucked up")
         # }
         
+        # NA must match number of metrics returned normally
+        # if(iter == 3 && param == 2){
+        #     return(c(grid[param,], rep(NA, 6)))
+        # }
+        
         # print('training begun')
         set.seed(as.numeric(Sys.Date()))
         mod <- tryCatch({
@@ -302,8 +307,10 @@ internal_cv <-
                      verbose = verbose)
         },
         error = function(err){
-            print(err)
-            stop("Internal model fit failed!")
+            # print(err)
+            warning(paste0("Internal model fit failed: \n", err))
+            return(c(grid[param,], rep(NA, 6)))
+            # stop("Internal model fit failed!")
         })
         
         # set.seed(42)
@@ -396,8 +403,10 @@ internal_cv <-
                        model_type = model_type, model_args, param, scale)
         },
         error = function(err){
-            print(err)
-            stop("Internal model prediction failed!")
+            # print(err)
+            # stop("Internal model prediction failed!")
+            warning(paste0("Internal model prediction failed: \n", err))
+            return(c(grid[param,], rep(NA, 6)))
         })
         
         # result2 <- tryCatch({
@@ -454,7 +463,7 @@ internal_cv <-
                 "AUC", "Sensitivity", "Specificity",
                 "PPV", "NPV", "F1-Score")        
 
-    #print(finalMetrics)
+    print(finalMetrics)
     
     # Take average performance across folds
     tmp <- lapply(finalMetrics, FUN=function(x) matrix(unlist(x[,(ncol(grid)+1):ncol(x)]), nrow=nrow(grid)))
